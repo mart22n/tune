@@ -11,4 +11,12 @@ The app shows in a great way, how the user has deviated from the intended tune, 
 
 3) showing, using a color, how the user has deviated from the key the song started in. A color is visually easier to perceive than numeric or needle-based indicators
 
+#Structure
+The application's android studio project has 3 folders on top level:
+app - that's where the app's code resides. Code is based on https://github.com/nivwusquorum/Simple-Guitar-Tuner
+main - third-party speedometer display library which is copied from https://github.com/ntoskrnl/AndroidWidgets
+MPAndroidChart - third-party Android charting library, licensed under Apache v2.0, copied from https://github.com/PhilJay/MPAndroidChart.
+
+When it is clear the third-party libraries do not need modifications, we may reference them from online, so that tuneapp does not contain copies of the libraries' sources anymore.
+
 Currently anyone is welcome to contribute!
