@@ -1,4 +1,4 @@
-package com.tune.tune;
+package com.tune;
 
 public class CircularBuffer {
 	private short [] array;

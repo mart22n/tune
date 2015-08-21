@@ -1,2 +1,2 @@
-include ':app', ':main', ':MPChartLib'
+include ':app', ':main', ':MPChartLib', ':businesslogiclib'
 //project(':MPAndroidChart:MPChartLib').projectDir=new File('MPAndroidChart/MPChartLib')

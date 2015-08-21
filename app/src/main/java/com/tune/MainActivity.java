@@ -1,4 +1,4 @@
-package com.tune.tune;
+package com.tune;
 
 import android.app.Activity;
 import android.graphics.Color;

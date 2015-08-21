@@ -1,7 +1,11 @@
-package com.tune.tune;
+package com.tune;
 
-import com.tune.tune.SoundAnalyzer.AnalyzedSound;
+import com.tune.SoundAnalyzer.AnalyzedSound;
 
+/**
+ * When we have invalid data points (pause, too much noise etc), frequency is
+ * extrapolated smoothly between available data points
+ */
 public class FrequencySmoothener {
 	static final double frequencyForgetting = 0.9; // how fast forget frequency
 	static final int invalidDataAllowed = 6; // if this many uncertain data sets, assume frequency

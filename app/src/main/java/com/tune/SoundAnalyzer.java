@@ -1,11 +1,11 @@
-package com.tune.tune;
+package com.tune;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.util.Log;
 
-import com.tune.tune.SoundAnalyzer.AnalyzedSound.ReadingType;
+import com.tune.SoundAnalyzer.AnalyzedSound.ReadingType;
 
 import java.util.Observable;
 import java.util.concurrent.locks.Lock;
@@ -36,7 +36,7 @@ public class SoundAnalyzer extends Observable implements AudioRecord.OnRecordPos
 
 	private AudioRecord audioRecord;
 	private int bufferSize;
-	private final com.tune.tune.CircularBuffer audioData;
+	private final com.tune.CircularBuffer audioData;
 	private short [] audioDataTemp;
 	
 	private Lock analyzingData;
@@ -90,7 +90,7 @@ public class SoundAnalyzer extends Observable implements AudioRecord.OnRecordPos
 	}
 	
 	private void onNotifyRateChanged() {
-		if(Math.random() < com.tune.tune.ConfigFlags.howOftenLogNotifyRate)
+		if(Math.random() < com.tune.ConfigFlags.howOftenLogNotifyRate)
 			Log.d(TAG, "Notify rate: " + notifyRateinS);
 		if(audioRecord.setPositionNotificationPeriod(
 				(int)(notifyRateinS*AUDIO_SAMPLING_RATE)) !=
@@ -125,7 +125,7 @@ public class SoundAnalyzer extends Observable implements AudioRecord.OnRecordPos
 		audioDataTemp = new short[audioDataSize];
 		audioDataAnalyzis = new double[4 * audioDataSize + 100];
 		wavelength = new double[audioDataSize];
-		audioData = new com.tune.tune.CircularBuffer(audioDataSize);
+		audioData = new com.tune.CircularBuffer(audioDataSize);
 		analyzingData = new ReentrantLock();
 		fft_method = new DoubleFFT_1D(audioDataSize);
 	}
@@ -224,12 +224,14 @@ public class SoundAnalyzer extends Observable implements AudioRecord.OnRecordPos
 			@Override
 			public void run() {
 				if(!analyzingData.tryLock()) {
+					// analysis too slow, lower notify rate gradually till minNotifyRate
 					notifyRateinS=Math.min(notifyRateinS + 0.01, minNotifyRate);
 					onNotifyRateChanged();
-					if(com.tune.tune.ConfigFlags.shouldLogAnalyzisTooSlow)
+					if(com.tune.ConfigFlags.shouldLogAnalyzisTooSlow)
 						Log.d(TAG, "Analyzing algorithm is too slow. Dropping sample");
 					return;
 				} else {
+					// analysis fast enough, raise notify rate gradually till maxNotifyRate
 					notifyRateinS=Math.max(notifyRateinS - 0.001, maxNotifyRate);
 					onNotifyRateChanged();
 				}
@@ -365,7 +367,7 @@ public class SoundAnalyzer extends Observable implements AudioRecord.OnRecordPos
 		if(loudness<loudnessThreshold)
 			return new AnalyzedSound(loudness,ReadingType.TOO_QUIET);
 		
-		computeAutocorrelation();	// mte: probably to clean up the sample from harmonics to detect
+		computeAutocorrelation();	// mart22n: probably to clean up the sample from harmonics to detect
 									// fundamental freq.
 		
 		//chopOffEdges(0.2); 
