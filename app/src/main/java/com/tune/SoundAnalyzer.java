@@ -13,7 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import edu.emory.mathcs.jtransforms.fft.DoubleFFT_1D;
 
-public class SoundAnalyzer extends Observable implements AudioRecord.OnRecordPositionUpdateListener {
+class SoundAnalyzer extends Observable implements AudioRecord.OnRecordPositionUpdateListener {
 	public static final String TAG = "RealGuitarTuner";
 	
 	private static final int AUDIO_SAMPLING_RATE = 44100;
@@ -202,7 +202,7 @@ public class SoundAnalyzer extends Observable implements AudioRecord.OnRecordPos
 		dumpAudioData = true;
 	}
 	
-	public class ArrayToDump {
+	class ArrayToDump {
 		public double [] arr;
 		int elements;
 		public ArrayToDump(double [] a, int e) {

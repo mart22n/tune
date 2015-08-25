@@ -1,6 +1,6 @@
 package com.tune;
 
-public class CircularBuffer {
+class CircularBuffer {
 	private short [] array;
 	private int head;
 	private int size;

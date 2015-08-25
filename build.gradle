@@ -9,6 +9,9 @@ subprojects {
 
 
 buildscript {
+    repositories {
+        mavenCentral()
+    }
     dependencies {
         classpath 'com.android.tools.build:gradle:1.2.3'
     }
@@ -22,6 +25,7 @@ project(':MPChartLib') {
         buildToolsVersion '21.1.1'
         defaultConfig {
             minSdkVersion 8
+            targetSdkVersion 21
             targetSdkVersion 21
             versionCode 1
             versionName '1.0'
@@ -68,8 +72,26 @@ project(':app') {
         }
     }
     dependencies {
-        compile project(':MPChartLib'), project(':main')
+        compile project(':MPChartLib'), project(':main'), project(':businesslogiclib')
         compile fileTree(dir: 'libs', include: ['*.jar'])
         compile 'com.android.support:appcompat-v7:21.0.3'
+        testCompile 'junit:junit:4.12'
+    }
+}
+
+project(':businesslogiclib') {
+    apply plugin: 'com.android.library'
+    android {
+        compileSdkVersion 21
+        buildToolsVersion '21.1.1'
+        defaultConfig {
+            minSdkVersion 8
+            targetSdkVersion 21
+            versionCode 1
+            versionName '1.0'
+        }
+        dependencies {
+            testCompile 'junit:junit:4.12'
+        }
     }
 }

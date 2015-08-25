@@ -29,7 +29,7 @@ import java.util.Observer;
 //import com.github.mikephil.charting.charts.BarChart;
 
 
-public class MainActivity extends Activity implements Observer {
+class MainActivity extends Activity implements Observer {
 
     public static final String TAG = "Tune";
     private SoundAnalyzer soundAnalyzer = null ;
@@ -38,6 +38,7 @@ public class MainActivity extends Activity implements Observer {
     private SpeedometerGauge gauge;
    // BarChart barChart;
     LineChart lineChart;
+    BusinessLogicAdapter businessLogicAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
