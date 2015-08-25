@@ -3,7 +3,7 @@ package com.tune;
 /**
  * Created by mart22n on 22.08.2015.
  */
-public interface AudioRecordListener {
+interface AudioRecordListener {
     // constants copied from audioformat.java
     public static final int CHANNEL_IN_FRONT = 0x10;
     public static final int CHANNEL_IN_MONO = CHANNEL_IN_FRONT;

@@ -18,6 +18,7 @@ import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -29,7 +30,7 @@ import java.util.Observer;
 //import com.github.mikephil.charting.charts.BarChart;
 
 
-class MainActivity extends Activity implements Observer {
+class MainActivity extends Activity implements Observer, BusinessLogicAdapterListener {
 
     public static final String TAG = "Tune";
     private SoundAnalyzer soundAnalyzer = null ;
@@ -347,5 +348,15 @@ class MainActivity extends Activity implements Observer {
                 SoundAnalyzer.ArrayToDump a = (SoundAnalyzer.ArrayToDump)obj;
                 ui.dumpArray(a.arr, a.elements);
             }*/
+    }
+
+    @Override
+    public void onFirstNoteDetected(Note note) {
+
+    }
+
+    @Override
+    public void onNewNotesOrPausesAvailable(List<Note> notes) {
+
     }
 }
