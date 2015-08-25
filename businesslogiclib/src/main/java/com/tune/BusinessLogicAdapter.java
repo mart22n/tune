@@ -12,6 +12,8 @@ class BusinessLogicAdapter implements Observer {
     }
     @Override
     public void update(Observable observable, Object data) {
+        double[] doubles = (double[]) data;
+        // control goes to FE -> SPF->VD->NE->DF->NI
         throw new UnsupportedOperationException();
     }
 

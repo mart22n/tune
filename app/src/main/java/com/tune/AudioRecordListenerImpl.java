@@ -28,8 +28,8 @@ class AudioRecordListenerImpl extends java.util.Observable implements
     }
 
     /**
-     * Here observers are notified of new available data from AudioRecord. Data is pulled from
-     * fifo and given to observers, using notifyObservers().
+     * Here observers are notified of new available data from AudioRecord. Data is pulled as an array
+     * of doubles from circularBuffer and given to observers, using notifyObservers().
      * @param recorder
      */
     @Override
@@ -38,4 +38,5 @@ class AudioRecordListenerImpl extends java.util.Observable implements
     }
 
     private AudioRecord audioRecord;
+    private CircularBuffer circularBuffer;
 }
