@@ -6,9 +6,13 @@ import android.media.AudioRecord;
  * Created by mart22n on 22.08.2015.
  */
 class AudioRecordListenerImpl extends java.util.Observable implements
-        AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
+AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
+
+    boolean shouldAudioReaderThreadDie;
+    Thread audioReaderThread;
+
     @Override
-    public void setAudioRecordOptions(int channelConfig, int audioFormat) {
+    public void setAudioRecordOptions(int channelConfig, int audioFormat, int sampleRate) {
         throw new UnsupportedOperationException();
     }
 
@@ -36,6 +40,35 @@ class AudioRecordListenerImpl extends java.util.Observable implements
     public void onPeriodicNotification(AudioRecord recorder) {
         throw new UnsupportedOperationException();
     }
+
+    /**
+     * Start audio recording in separate thread (thread writes samples into ringbuffer)
+     */
+    void startListening() {
+        shouldAudioReaderThreadDie = false;
+        audioReaderThread = new Thread(new Runnable() {
+            public void run() {
+             /*   while(!shouldAudioReaderThreadDie) {
+                    int shortsRead = audioRecord.read(audioDataTemp,0,audioDataSize);
+                    if(shortsRead < 0) {
+                        Log.e(TAG, "Could not read audio data.");
+                    } else {
+                        for(int i=0; i<shortsRead; ++i) {
+                            audioData.push(audioDataTemp[i]);
+                        }
+                    }
+                }
+                Log.d(TAG, "AudioReaderThread reached the end");*/
+            }
+        });
+        audioReaderThread.setDaemon(false);
+        audioReaderThread.start();
+    }
+
+    void stopListening() {
+        throw new UnsupportedOperationException();
+    }
+
 
     private AudioRecord audioRecord;
     private CircularBuffer circularBuffer;

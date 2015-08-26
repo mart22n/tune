@@ -310,7 +310,7 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
             //if(obj instanceof SoundAnalyzer.AnalyzedSound) {
             SoundAnalyzer.AnalyzedSound result = (SoundAnalyzer.AnalyzedSound)obj;
             // result.getDebug();
-            frequency = FrequencySmoothener.getSmoothFrequency(result);
+            frequency = result.frequency;//FrequencySmoothener.getSmoothFrequency(result);
             if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.BIG_FREQUENCY) {
                 mainMessage.setTextColor(Color.rgb(255,36,0));
                 mainMessage.setText("Too high frequency");
