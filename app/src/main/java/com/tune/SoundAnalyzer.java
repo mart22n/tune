@@ -406,6 +406,7 @@ class SoundAnalyzer extends Observable implements AudioRecord.OnRecordPositionUp
 			if(audioDataAnalyzis[i]*audioDataAnalyzis[i+1] <=0) passedZero = true;
 			if(passedZero && audioDataAnalyzis[i] > MPM*maximum &&
 					audioDataAnalyzis[i] > audioDataAnalyzis[i+1]) {
+				// falling wave
 				if(lastStart != -1)
 					wavelength[wavelengths++]=i-lastStart;
 				lastStart=i; passedZero = false;

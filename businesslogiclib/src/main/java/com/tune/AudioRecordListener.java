@@ -15,7 +15,7 @@ interface AudioRecordListener {
      * @param channelConfig - currently is working CHANNEL_IN_FRONT
      * @param audioFormat - currently ENCODING_PCM_16BIT is working
      */
-    public void setAudioRecordOptions(int channelConfig, int audioFormat);
+    public void setAudioRecordOptions(int channelConfig, int audioFormat, int sampleRate);
 
     /**
      * Set max period between notifications of new available audio samples.
@@ -23,14 +23,5 @@ interface AudioRecordListener {
      * @param ms - period in ms
      * @return
      */
-    public int setPositionNotificationPeriod(int ms);
-
-    /**
-    * Returns the minimum buffer size required for the successful creation of an AudioRecord
-    * object, in byte units.
-            * Note that this size doesn't guarantee a smooth recording under load, and higher values
-            * should be chosen according to the expected frequency at which the AudioRecord instance
-    * will be polled for new data.
-     **/
-    public int getMinBufferSize(int sampleRateInHz, int channelConfig, int audioFormat);
+    public boolean setPositionNotificationPeriod(int ms);
 }

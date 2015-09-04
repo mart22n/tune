@@ -7,12 +7,22 @@ import java.util.Observable;
 import java.util.Observer;
 
 class BusinessLogicAdapter implements Observer {
+
+    private FrequencyExtractor frequencyExtractor;
+    private HarmonicsRemover harmonicsRemover;
+
     public BusinessLogicAdapter(AudioRecordListener listener) {
+        harmonicsRemover = new HarmonicsRemover();
+        frequencyExtractor = new FrequencyExtractor();
         audioRecordListener = listener;
     }
     @Override
     public void update(Observable observable, Object data) {
-        double[] doubles = (double[]) data;
+        Pair<double[ ], Integer> pair = (Pair<double[ ], Integer>)data;
+        double[] sample = pair.first;
+        int sampleSize = pair.second;
+        sample = harmonicsRemover.removeHarmonics(sample, sampleSize);
+        frequencyExtractor.extractGroupsOfFrequencies(sample, sampleSize);
         // control goes to FE -> SPF->VD->NE->DF->NI
         throw new UnsupportedOperationException();
     }

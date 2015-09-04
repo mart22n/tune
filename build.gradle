@@ -91,6 +91,7 @@ project(':businesslogiclib') {
             versionName '1.0'
         }
         dependencies {
+            compile fileTree(dir: 'libs', include: ['*.jar'])
             testCompile 'junit:junit:4.12'
         }
     }
