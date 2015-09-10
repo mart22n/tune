@@ -9,13 +9,14 @@ interface AudioRecordListener {
     public static final int CHANNEL_IN_MONO = CHANNEL_IN_FRONT;
     /** Audio data format: PCM 16 bit per sample. Guaranteed to be supported by devices. */
     public static final int ENCODING_PCM_16BIT = 2;
+    public static final int SAMPLE_RATE_STANDARD = 44100;
 
     /**
      *
      * @param channelConfig - currently is working CHANNEL_IN_FRONT
      * @param audioFormat - currently ENCODING_PCM_16BIT is working
      */
-    public void setAudioRecordOptions(int channelConfig, int audioFormat);
+    public void setAudioRecordOptions(int channelConfig, int audioFormat, int sampleRate);
 
     /**
      * Set max period between notifications of new available audio samples.
@@ -23,14 +24,7 @@ interface AudioRecordListener {
      * @param ms - period in ms
      * @return
      */
-    public int setPositionNotificationPeriod(int ms);
+    public boolean setPositionNotificationPeriod(int ms);
 
-    /**
-    * Returns the minimum buffer size required for the successful creation of an AudioRecord
-    * object, in byte units.
-            * Note that this size doesn't guarantee a smooth recording under load, and higher values
-            * should be chosen according to the expected frequency at which the AudioRecord instance
-    * will be polled for new data.
-     **/
-    public int getMinBufferSize(int sampleRateInHz, int channelConfig, int audioFormat);
+    public int sampleRate();
 }
