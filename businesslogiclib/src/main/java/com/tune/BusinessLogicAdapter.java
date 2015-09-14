@@ -15,16 +15,20 @@ class BusinessLogicAdapter implements Observer {
     public BusinessLogicAdapter(AudioRecordListener listener) {
         harmonicsRemover = new HarmonicsRemover();
         audioRecordListener = listener;
-        frequencyExtractor = new FrequencyExtractor(audioRecordListener.sampleRate(), 30); //TODO: get this from settings
+        FrequencyExtractor.FrequencyExtractorSettings s = new FrequencyExtractor.FrequencyExtractorSettings(); //TODO: get this from settings
+        s.loudnessThreshold = 0;
+        s.maxDiffInPercent = 1;
+        s.measurementWindowMs = 0.03;
+        s.nofConsecutiveUpwardsCrossingsToMeasure = 5;
+        s.sampleRate = AudioRecordListener.SAMPLE_RATE_STANDARD;
+        frequencyExtractor = new FrequencyExtractor(s);
     }
 
     @Override
     public void update(Observable observable, Object data) {
-        Pair<double[ ], Integer> pair = (Pair<double[ ], Integer>)data;
-        double[] sample = pair.first;
-        int sampleSize = pair.second;
-        sample = harmonicsRemover.removeHarmonics(sample, sampleSize);
-        frequencyExtractor.extractGroupsOfFrequencies(sample, sampleSize);
+        double[] samples = (double[])data;
+        samples = harmonicsRemover.removeHarmonics(samples, samples.length);
+        frequencyExtractor.extractGroupsOfFrequencies(samples);
         // control goes to FE -> SPF->VD->NE->DF->NI
         throw new UnsupportedOperationException();
     }
