@@ -9,6 +9,7 @@ interface AudioRecordListener {
     public static final int CHANNEL_IN_MONO = CHANNEL_IN_FRONT;
     /** Audio data format: PCM 16 bit per sample. Guaranteed to be supported by devices. */
     public static final int ENCODING_PCM_16BIT = 2;
+    public static final int SAMPLE_RATE_STANDARD = 44100;
 
     /**
      *
@@ -24,4 +25,6 @@ interface AudioRecordListener {
      * @return
      */
     public boolean setPositionNotificationPeriod(int ms);
+
+    public int sampleRate();
 }

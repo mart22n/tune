@@ -15,7 +15,6 @@ import edu.emory.mathcs.jtransforms.fft.DoubleFFT_1D;
 
 class SoundAnalyzer extends Observable implements AudioRecord.OnRecordPositionUpdateListener {
 	public static final String TAG = "RealGuitarTuner";
-	
 	private static final int AUDIO_SAMPLING_RATE = 44100;
 	private static int audioDataSize = 7200; // Length of sample to analyze.
 	

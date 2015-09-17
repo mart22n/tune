@@ -2,7 +2,7 @@ package com.tune;
 import org.junit.*;
 import static org.junit.Assert.*;
 
-class BusinessLogicAdapterTest {
+public class BusinessLogicAdapterTest {
     protected int value1, value2;
 
     // assigning the values

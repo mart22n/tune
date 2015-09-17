@@ -87,6 +87,11 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
         }).start();
     }
 
+    @Override
+    public int sampleRate() {
+        return sampleRt;
+    }
+
     /**
      * Start audio recording in separate thread (thread writes samples into ringbuffer)
      */

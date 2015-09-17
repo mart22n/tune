@@ -1,5 +1,16 @@
 Time
 ID
+<<<<<<< HEAD
+=======
+Desc
+Result
+
+TODO
+Test freq change: freq changes e.g. 15 c up and then 5 c down. Test @ different freqs.
+
+Time
+ID
+>>>>>>> ImplementFrequencyExtractor
 Descr
 Result
 

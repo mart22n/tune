@@ -7,22 +7,27 @@ import java.util.Observable;
 import java.util.Observer;
 
 class BusinessLogicAdapter implements Observer {
-
+    private AudioRecordListener audioRecordListener;
     private FrequencyExtractor frequencyExtractor;
-    private HarmonicsRemover harmonicsRemover;
 
+    private HarmonicsRemover harmonicsRemover;
     public BusinessLogicAdapter(AudioRecordListener listener) {
         harmonicsRemover = new HarmonicsRemover();
-        frequencyExtractor = new FrequencyExtractor();
         audioRecordListener = listener;
+        FrequencyExtractor.FrequencyExtractorSettings s = new FrequencyExtractor.FrequencyExtractorSettings(); //TODO: get this from settings
+        s.loudnessThreshold = 0;
+        s.maxDiffInPercent = 1;
+        s.measurementWindowMs = 0.03;
+        s.nofConsecutiveUpwardsCrossingsToMeasure = 5;
+        s.sampleRate = AudioRecordListener.SAMPLE_RATE_STANDARD;
+        frequencyExtractor = new FrequencyExtractor(s);
     }
+
     @Override
     public void update(Observable observable, Object data) {
-        Pair<double[ ], Integer> pair = (Pair<double[ ], Integer>)data;
-        double[] sample = pair.first;
-        int sampleSize = pair.second;
-        sample = harmonicsRemover.removeHarmonics(sample, sampleSize);
-        frequencyExtractor.extractGroupsOfFrequencies(sample, sampleSize);
+        double[] samples = (double[])data;
+        samples = harmonicsRemover.removeHarmonics(samples, samples.length);
+        frequencyExtractor.extractFrequencies(samples);
         // control goes to FE -> SPF->VD->NE->DF->NI
         throw new UnsupportedOperationException();
     }
@@ -42,6 +47,4 @@ class BusinessLogicAdapter implements Observer {
     public List<Pair<Short, Short> > trendLineOfLastDeviations(int howMany){
         throw new UnsupportedOperationException();
     }
-
-    private AudioRecordListener audioRecordListener;
 }
