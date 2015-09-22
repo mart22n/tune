@@ -307,6 +307,7 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
 
     @Override
     public void update(Observable who, Object obj) {
+        //if obj instanceof BusinessLogicAdapter
             //if(obj instanceof SoundAnalyzer.AnalyzedSound) {
             SoundAnalyzer.AnalyzedSound result = (SoundAnalyzer.AnalyzedSound)obj;
             // result.getDebug();
@@ -358,5 +359,10 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
     @Override
     public void onNewNotesOrPausesAvailable(List<Note> notes) {
 
+    }
+
+    @Override
+    public void onToastNotification(String notification) {
+        Toast.makeText(this, notification, Toast.LENGTH_LONG).show();
     }
 }

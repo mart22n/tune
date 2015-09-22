@@ -303,14 +303,34 @@ public class FrequencyExtractorTest {
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
     }
 
+    @Test
+    public void ifWindowTooShort_errorIsReturned() {
+        double[] samples = {
+                0, 1, 1, 0, -1, -1,    // 166 Hz
+                0, 1, 1, 0, -1, -1,
+                0, 1, 1, 0, -1, -1,
+                0, 1, 1, 0, -1, -1,
+                0, 1, 1, 0, -1, -1,
+        };
+
+        int sampleRate = 1000;
+        int measurementWindowLenMs = 18;
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1);
+        double[] res = frequencyExtractor.extractFrequencies(samples);
+        Assert.assertEquals(1, res.length);
+        Assert.assertEquals(-1.0,res[0]);
+        Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
+    }
+
     private void setFESettings(int sampleRate, int loudnessThreshold, int nofConsecutiveCrossingsToMeasure,
                                double measurementWindowMs, double maxDiffInPercent) {
         FrequencyExtractor.FrequencyExtractorSettings s = new FrequencyExtractor.FrequencyExtractorSettings();
         s.loudnessThreshold = loudnessThreshold;
         s.maxDiffInPercent = maxDiffInPercent;
         s.measurementWindowMs = measurementWindowMs;
-        s.nofConsecutiveUpwardsCrossingsToMeasure = nofConsecutiveCrossingsToMeasure;
+        s.setNofConsecutiveUpwardsCrossingsToMeasure(nofConsecutiveCrossingsToMeasure);
         s.sampleRate = sampleRate;
         frequencyExtractor = new FrequencyExtractor(s);
+
     }
 }

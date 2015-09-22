@@ -6,12 +6,13 @@ import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
-class BusinessLogicAdapter implements Observer {
+class BusinessLogicAdapter extends Observable implements Observer  {
     private AudioRecordListener audioRecordListener;
     private FrequencyExtractor frequencyExtractor;
+    private BusinessLogicAdapterListener blaListener;
 
     private HarmonicsRemover harmonicsRemover;
-    public BusinessLogicAdapter(AudioRecordListener listener) {
+    public BusinessLogicAdapter(AudioRecordListener listener, BusinessLogicAdapterListener blaListener) {
         harmonicsRemover = new HarmonicsRemover();
         audioRecordListener = listener;
         FrequencyExtractor.FrequencyExtractorSettings s = new FrequencyExtractor.FrequencyExtractorSettings(); //TODO: get this from settings
@@ -21,15 +22,22 @@ class BusinessLogicAdapter implements Observer {
         s.nofConsecutiveUpwardsCrossingsToMeasure = 5;
         s.sampleRate = AudioRecordListener.SAMPLE_RATE_STANDARD;
         frequencyExtractor = new FrequencyExtractor(s);
+        frequencyExtractor.addObserver(this);
+        this.blaListener = blaListener;
     }
 
     @Override
     public void update(Observable observable, Object data) {
-        double[] samples = (double[])data;
-        samples = harmonicsRemover.removeHarmonics(samples, samples.length);
-        frequencyExtractor.extractFrequencies(samples);
-        // control goes to FE -> SPF->VD->NE->DF->NI
-        throw new UnsupportedOperationException();
+        if(data instanceof String) {
+            blaListener.onToastNotification(data.toString());
+        }
+        else {
+            double[] samples = (double[]) data;
+            samples = harmonicsRemover.removeHarmonics(samples, samples.length);
+            frequencyExtractor.extractFrequencies(samples);
+            // control goes to FE -> SPF->VD->NE->DF->NI
+            //blaListener.onFirstNoteDetected(new Note());
+        }
     }
 
     public void startListeningFirstNote() {

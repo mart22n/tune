@@ -10,4 +10,6 @@ interface BusinessLogicAdapterListener {
     public void onFirstNoteDetected(Note note);
 
     public void onNewNotesOrPausesAvailable(List<Note> notes);
+
+    public void onToastNotification(String notification);
 }

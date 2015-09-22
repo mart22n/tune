@@ -1,9 +1,11 @@
 package com.tune;
 
+import java.util.Observable;
+
 /**
  * Created by mart22n on 22.08.2015.
  */
-class FrequencyExtractor {
+class FrequencyExtractor extends Observable {
 
     private int sampleRate;
     private ReadingType readingType = ReadingType.ERROR;
@@ -25,12 +27,27 @@ class FrequencyExtractor {
         ERROR
     };
 
-    static class FrequencyExtractorSettings {
-        int sampleRate, loudnessThreshold, nofConsecutiveUpwardsCrossingsToMeasure;
+    static class FrequencyExtractorSettings extends Observable {
+        int sampleRate, loudnessThreshold;
+        int nofConsecutiveUpwardsCrossingsToMeasure;
         double measurementWindowMs, maxDiffInPercent;
+
+        void setNofConsecutiveUpwardsCrossingsToMeasure(int value) {
+            try {
+                if (value < 4) {
+                    nofConsecutiveUpwardsCrossingsToMeasure = 4;
+                    throw new IllegalArgumentException();
+                } else
+                    nofConsecutiveUpwardsCrossingsToMeasure = value;
+            } catch (IllegalArgumentException e) {
+                notifyObservers("Illegal param value: sampleRate = 44100, " +
+                        "nofConsecutiveUpwardsCrossingsToMeasure >=4," +
+                        "measurementWindowMs <= 100. Using default values.");
+            }
+        }
     }
 
-    public FrequencyExtractor(FrequencyExtractorSettings settings) {
+    FrequencyExtractor(FrequencyExtractorSettings settings) {
         this.sampleRate = settings.sampleRate;
         this.loudnessThreshold = settings.loudnessThreshold;
         this.nofConsecutiveUpwardsCrossingsToMeasure = settings.nofConsecutiveUpwardsCrossingsToMeasure;
@@ -41,15 +58,15 @@ class FrequencyExtractor {
         prevInputsLastWindowSamples = new double[nofSamplesInWindow];
     }
 
-    /**
-     * Takes in array of sound pressure values, gives back array of frequencies. Each frequency
-     * in the array is measured for a measurement interval specified by measurementWindowMs.
-     * When the array of previous samples ended at e.g. 2/3 of a measurement interval, the last
-     * measurement window in previous samples array is concatenated with the first measurement
-     * window in new samples array.
-     * @param samples
-     * @return
-     */
+            /**
+             * Takes in array of sound pressure values, gives back array of frequencies. Each frequency
+             * in the array is measured for a measurement interval specified by measurementWindowMs.
+             * When the array of previous samples ended at e.g. 2/3 of a measurement interval, the last
+             * measurement window in previous samples array is concatenated with the first measurement
+             * window in new samples array.
+             * @param samples
+             * @return
+             */
     public double[] extractFrequencies(double[] samples) {
         int windowIndex = 0;
         if(samples.length < nofSamplesInWindow) {
@@ -57,6 +74,7 @@ class FrequencyExtractor {
             return new double[] {-1};
         }
 
+        // samples which are left over from last window are discarded from ret
         double[] ret = new double[samples.length / nofSamplesInWindow];
         int offsetInSamples = 0;
 
@@ -159,10 +177,6 @@ class FrequencyExtractor {
         return ret;
     }
 
-    private boolean tooFewCrossings(double[] samples, int nofCrossings, int i) {
-        return nofCrossings < nofConsecutiveUpwardsCrossingsToMeasure && i == nofSamplesInWindow - 1;
-    }
-
     private double getAvgCrossingInterval(int nofCrossings, int[] indexesOfCrossings) {
         double avgCrossingInterval = 0;
         int sum = 0;
@@ -191,7 +205,7 @@ class FrequencyExtractor {
 
 
     ReadingType readingType() {
-        return readingType;
+        return this.readingType;
     }
 
     private boolean isPause(double[] samples, int offset) {
