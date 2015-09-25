@@ -1,15 +1,13 @@
-package com.tune;
-
-import java.util.List;
+package com.tune.businesslogic;
 
 /**
  * Created by mart22n on 25.08.2015.
  */
-interface BusinessLogicAdapterListener {
+public interface BusinessLogicAdapterListener {
 
     public void onFirstNoteDetected(Note note);
 
-    public void onNewNotesOrPausesAvailable(List<Note> notes);
+    public void onNewNotesOrPausesAvailable(Note[] notes);
 
     public void onToastNotification(String notification);
 }

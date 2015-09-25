@@ -1,11 +1,12 @@
-package com.tune;
+package com.tune.businesslogic;
 
+import java.io.Serializable;
 import java.util.Observable;
 
 /**
  * Created by mart22n on 22.08.2015.
  */
-class FrequencyExtractor extends Observable {
+public class FrequencyExtractor extends Observable {
 
     private int sampleRate;
     private ReadingType readingType = ReadingType.ERROR;
@@ -27,10 +28,11 @@ class FrequencyExtractor extends Observable {
         ERROR
     };
 
-    static class FrequencyExtractorSettings extends Observable {
-        int sampleRate, loudnessThreshold;
-        int nofConsecutiveUpwardsCrossingsToMeasure;
-        double measurementWindowMs, maxDiffInPercent;
+    @SuppressWarnings("serial") //with this annotation we are going to hide compiler warning
+    public static class FrequencyExtractorSettings extends Observable implements Serializable {
+        public int sampleRate, loudnessThreshold;
+        public int nofConsecutiveUpwardsCrossingsToMeasure;
+        public double measurementWindowMs, maxDiffInPercent;
 
         void setNofConsecutiveUpwardsCrossingsToMeasure(int value) {
             try {

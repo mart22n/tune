@@ -2,8 +2,11 @@ package com.tune;
 
 import android.content.Context;
 import android.media.AudioRecord;
+import android.media.MediaRecorder;
 import android.util.Log;
 import android.util.Pair;
+
+import com.tune.businesslogic.AudioRecordListener;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -11,7 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Created by mart22n on 22.08.2015.
  */
-class AudioRecordListenerImpl extends java.util.Observable implements
+public class AudioRecordListenerImpl extends java.util.Observable implements
 AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
 
     boolean shouldAudioReaderThreadDie;
@@ -24,7 +27,7 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
     private int bufSize;
     private short[] audioSamples;
     private double[] pressureValues;
-    private String appName;
+    private String tag;
     private Lock lock;
     private static final int AUDIO_SAMPLING_RATE = 44100;
     private static final int maxSampleSize = 44100; // Length of sample to analyze.
@@ -33,24 +36,26 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
 
 
     AudioRecordListenerImpl(Context c) {
-        appName = c.getResources().getString(R.string.app_name);
+        tag = c.getResources().getString(R.string.tag);
         lock = new ReentrantLock();
     }
 
     @Override
-    public void setAudioRecordOptions(int channelConfig, int audioFormat, int sampleRate) {
+    public void setAudioRecordOptions(int channelConfig, int audioFormat, int sampleRate,
+                                      int positionNotificationPeriodMs) {
         channelConf = channelConfig;
         audioFmt = audioFormat;
         sampleRt = sampleRate;
-        getMinBufferSize();
+        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channelConfig,
+                audioFormat, getMinBufferSize());
+        setPositionNotificationPeriod(positionNotificationPeriodMs);
     }
 
-    @Override
-    public boolean setPositionNotificationPeriod(int ms) {
+    private boolean setPositionNotificationPeriod(int ms) {
         if(audioRecord.setPositionNotificationPeriod(
                 (int)(ms*AUDIO_SAMPLING_RATE / 1000)) !=
                 AudioRecord.SUCCESS) {
-            Log.e(appName, "Invalid notify rate.");
+            Log.e(tag, "Invalid notify rate.");
             return false;
         }
         return true;
@@ -71,14 +76,14 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
             @Override
             public void run() {
             if(!lock.tryLock()) {
-                Log.e(appName, "Analyzing algorithm is too slow. Dropping sample");
+                Log.e(tag, "Analyzing algorithm is too slow. Dropping sample");
                 return;
             }
             double[] pressureValues = new double[4 * bufSize + 100];
             int elementsRead =
                     circularBuffer.getElements(pressureValues, 0, maxSampleSize);
             if(elementsRead == maxSampleSize) {
-                Log.e(appName, "Too many samples read from circular buffer");
+                Log.e(tag, "Too many samples read from circular buffer");
             }
             notifyObservers(new Pair<double[ ], Integer>(pressureValues, elementsRead));
 
@@ -95,33 +100,35 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
     /**
      * Start audio recording in separate thread (thread writes samples into ringbuffer)
      */
-    void startListening() {
+    @Override
+    public void start() {
         shouldAudioReaderThreadDie = false;
         audioReaderThread = new Thread(new Runnable() {
             public void run() {
                 while(!shouldAudioReaderThreadDie) {
                     int shortsRead = audioRecord.read(audioSamples,0,bufSize);
                     if(shortsRead < 0) {
-                        Log.e(appName, "Could not read audio data.");
+                        Log.e(tag, "Could not read audio data.");
                     } else {
                         for(int i=0; i<shortsRead; ++i) {
                             circularBuffer.push(audioSamples[i]);
                         }
                     }
                 }
-                Log.d(appName, "AudioReaderThread reached the end");
+                Log.d(tag, "AudioReaderThread reached the end");
             }
         });
         audioReaderThread.setDaemon(false);
         audioReaderThread.start();
     }
 
-    void stopListening() {
+    @Override
+    public void stop() {
         shouldAudioReaderThreadDie = true;
         try {
             audioReaderThread.join();
         } catch(Exception e) {
-            Log.e(appName, "Could not join audioReaderThread: " + e.getMessage());
+            Log.e(tag, "Could not join audioReaderThread: " + e.getMessage());
         }
     }
 

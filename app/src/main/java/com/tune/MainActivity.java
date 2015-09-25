@@ -1,66 +1,115 @@
 package com.tune;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.cardiomood.android.controls.gauge.SpeedometerGauge;
 import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.components.LimitLine;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.tune.businesslogic.AudioRecordListener;
+import com.tune.businesslogic.BusinessLogicAdapter;
+import com.tune.businesslogic.BusinessLogicAdapterListener;
+import com.tune.businesslogic.FrequencyExtractor;
+import com.tune.businesslogic.Note;
+import com.tune.businesslogic.NoteAndDeviationIdentifier;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
-//import com.github.mikephil.charting.data.BarDataSet;
-//import com.github.mikephil.charting.data.BarEntry;
+public class MainActivity extends Activity implements Observer, BusinessLogicAdapterListener {
 
-//import com.github.mikephil.charting.data.BarData;
-
-//import com.github.mikephil.charting.charts.BarChart;
-
-
-class MainActivity extends Activity implements Observer, BusinessLogicAdapterListener {
-
-    public static final String TAG = "Tune";
-    private SoundAnalyzer soundAnalyzer = null ;
+    public static final String tag = "tune";
     private TextView mainMessage = null;
     private double frequency;
     private SpeedometerGauge gauge;
-   // BarChart barChart;
     LineChart lineChart;
+    ImageButton stopStartButton;
     BusinessLogicAdapter businessLogicAdapter;
+    AudioRecordListener audioRecordListener;
+    private boolean started;
+    private int positionNotificationPeriodMs; //TODO: into settings
+    private ChartController chartController;
+    FrequencyExtractor.FrequencyExtractorSettings FESettings;
+    NoteAndDeviationIdentifier.NoteIdentifierSettings NDISettings;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        try {
-            soundAnalyzer = new SoundAnalyzer();
-            soundAnalyzer.addObserver(this);
-        } catch(Exception e) {
-            Toast.makeText(this, "The are problems with your microphone, app won't work.", Toast.LENGTH_LONG).show();
-            Log.e(TAG, "Exception when instantiating SoundAnalyzer: " + e.getMessage());
-        }
-        mainMessage = (TextView)findViewById(R.id.mainMessage);
         gauge = (SpeedometerGauge)findViewById(R.id.speedometer);
-        //barChart = (BarChart) findViewById(R.id.chart);
         lineChart = (LineChart)findViewById(R.id.chart);
-
+        mainMessage = (TextView)findViewById(R.id.mainMessage);
+        FESettings = new FrequencyExtractor.FrequencyExtractorSettings();
         createChart();
         createGauge();
+        started = true;
+        positionNotificationPeriodMs = 400;
+        audioRecordListener = new AudioRecordListenerImpl(this.getApplicationContext());
+        try {
+            audioRecordListener.setAudioRecordOptions(AudioRecordListener.CHANNEL_IN_FRONT,
+                    AudioRecordListener.ENCODING_PCM_16BIT, AudioRecordListener.SAMPLE_RATE_STANDARD,
+                    positionNotificationPeriodMs);
+        }
+        catch(Exception e) {
+            Toast.makeText(this, "The are problems with your microphone, app won't work.", Toast.LENGTH_LONG).show();
+            Log.e(tag, "Exception when audioRecordListener.setAudioRecordOptions: " + e.getMessage());
+        }
+        businessLogicAdapter = new BusinessLogicAdapter(audioRecordListener, this);
+        businessLogicAdapter.addObserver(this);
+        chartController = new ChartController();
+        setBLASettingsAndStartIt(0.1);
+        stopStartButton = (ImageButton) findViewById(R.id.startStopButton);
+        stopStartButton.setOnClickListener(new ImageButton.OnClickListener() {
+                                               public void onClick(View v) {
+                                                   try {
+                                                       if (started == true) {
+                                                           stopStartButton.setImageResource(R.drawable.mike_enabled);
+                                                           started = false;
+                                                           findViewById(R.id.action_settings).setEnabled(true);
+                                                           businessLogicAdapter.stopListening();
+                                                       } else {
+                                                           stopStartButton.setImageResource(R.drawable.stop);
+                                                           started = true;
+                                                           SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+                                                           double diff = 0.1;//Double.parseDouble(sharedPref.getString(getString(R.string.pref_default_max_diff_in_percent), "0.1"));
+                                                           Toast.makeText(MainActivity.this, Double.toString(diff), Toast.LENGTH_SHORT).show();
+                                                           setBLASettingsAndStartIt(diff);
+                                                           findViewById(R.id.action_settings).setEnabled(false);
+                                                       }
+                                                   } catch (Exception e) {
+                                                       Log.i(tag, "Error:" + e.getMessage());
+                                                   }
+                                               }
+                                           }
+        );
 
+    }
 
+    private void setBLASettingsAndStartIt(double diff) {
+        FESettings.maxDiffInPercent = diff;
+        businessLogicAdapter.setFrequencyExtractorOptions(FESettings);
+        NDISettings = new NoteAndDeviationIdentifier.NoteIdentifierSettings();
+        NDISettings.deviationWhereBorderLineStarts = 40;
+        NDISettings.measurementWindowMs = 30;
+        NDISettings.minNoteLenMs = 100;
+        NDISettings.octaveSpan = 2;
+        businessLogicAdapter.setNoteIdentifierOptions(NDISettings);
+        businessLogicAdapter.startListeningTune();//TODO:uncomment
     }
 
     private void createGauge() {
@@ -93,6 +142,7 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
         lineChart.setDragDecelerationFrictionCoef(0.85f);
         lineChart.setMinimumHeight(500);
         lineChart.setDescription("");
+        lineChart.getLegend().setEnabled(false);
 
         lineChart.getXAxis().setEnabled(true);
         lineChart.getXAxis().setDrawAxisLine(true);
@@ -102,10 +152,10 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
         lineChart.getXAxis().setTextColor(Color.WHITE);
         // define where to add labels of x-axis
         lineChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
-        LimitLine ll = new LimitLine(2f, "150");
+/*        LimitLine ll = new LimitLine(2f, "150");
         ll.setLineColor(Color.YELLOW);
         ll.setLineWidth(4f);
-        lineChart.getXAxis().addLimitLine(ll);
+        lineChart.getXAxis().addLimitLine(ll);*/
 
         lineChart.getAxisLeft().setAxisMaxValue(60);    // max deviation = +/-50 cents
         lineChart.getAxisLeft().setAxisMinValue(-60);
@@ -136,6 +186,8 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
         e = new Entry(10f, 7);
         note3.add(e);
         e = new Entry(-20f, 8);
+        note3.add(e);
+        e = new Entry(-20f, 9);
         note3.add(e);
 
         LineDataSet dsNote1 = new LineDataSet(note1, "");
@@ -173,76 +225,13 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
         LineData data = new LineData(xVals, dataSets);
         lineChart.setData(data);
         lineChart.invalidate(); // refresh
-
-
-        /*barChart.setBackgroundColor(Color.BLACK);
-        barChart.setTouchEnabled(true);
-        barChart.setDragEnabled(true);
-        barChart.setScaleXEnabled(true);
-        barChart.setScaleYEnabled(false);
-        barChart.setDragDecelerationFrictionCoef(0.85f);
-        barChart.setMinimumHeight(500);
-        barChart.setBackgroundColor(Color.GRAY);    //TODO: was black
-        barChart.setDescription("");
-        barChart.setDrawValueAboveBar(false);
-
-        barChart.getXAxis().setEnabled(true);
-        barChart.getXAxis().setDrawAxisLine(true);
-*//*        barChart.getXAxis().setDrawGridLines(true);
-        barChart.getXAxis().setGridColor(Color.WHITE);*//*
-        barChart.getXAxis().setAxisLineColor(Color.WHITE);
-        barChart.getXAxis().setTextColor(Color.WHITE);
-        // define where to add labels of x-axis
-        barChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
-        LimitLine ll = new LimitLine(2f, "150");
-        ll.setLineColor(Color.YELLOW);
-        ll.setLineWidth(4f);
-        barChart.getXAxis().addLimitLine(ll);
-
-        barChart.getAxisLeft().setAxisMaxValue(60);    // max deviation = +/-50 cents
-        barChart.getAxisLeft().setAxisMinValue(-60);
-        barChart.getAxisLeft().setStartAtZero(false);
-
-        barChart.getAxisLeft().setEnabled(true);
-        barChart.getAxisLeft().setDrawAxisLine(true);
-        barChart.getAxisLeft().setTextColor(Color.WHITE);
-        barChart.getAxisLeft().setAxisLineColor(Color.WHITE);
-
-        List<BarEntry> barValues = new ArrayList<BarEntry>();
-        barValues.add(new BarEntry(20f, 0));
-        barValues.add(new BarEntry(30f, 1));
-        barValues.add(new BarEntry(0f, 3));
-        barValues.add(new BarEntry(-30f, 2));
-        barValues.add(new BarEntry(-1f, 3));
-        BarDataSet dataSet = new BarDataSet(barValues, "");
-        dataSet.setAxisDependency(YAxis.AxisDependency.LEFT);
-        dataSet.setBarSpacePercent(0);
-        dataSet.setColor(Color.WHITE);
-
-        ArrayList<BarDataSet> dataSets = new ArrayList<BarDataSet>();
-        dataSets.add(dataSet);
-
-        // x-values
-        ArrayList<String> xVals = new ArrayList<String>();
-        xVals.add("C");
-        xVals.add("D");
-        xVals.add("E");
-        xVals.add("F");
-        xVals.add("G");
-
-        BarData chartData = new BarData(xVals, dataSets);
-
-        barChart.setData(chartData);
-
-        // chart is redrawn
-        barChart.invalidate();*/
     }
 
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_measuring, menu);
+        getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
@@ -255,6 +244,13 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            try {
+                Intent in = new Intent(getApplicationContext(), SettingsActivity.class);
+                //in.putExtra("FrequencyExtractorSettings", FESettings);
+                startActivity(in);
+            } catch (Exception e) {
+                Log.i(tag, "Failed to launch SettingsActivity: " + e.getMessage());
+            }
             return true;
         }
 
@@ -264,45 +260,49 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "onDestroy()");
-
+        Log.d(tag, "onDestroy()");
+        if(businessLogicAdapter != null)
+            businessLogicAdapter.stopListening();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Log.d(TAG,"onPause()");
+        Log.d(tag,"onPause()");
+        if(businessLogicAdapter != null)
+            businessLogicAdapter.stopListening();
     }
 
     @Override
     protected void onRestart() {
         super.onRestart();
-        Log.d(TAG,"onRestart()");
-
+        Log.d(tag,"onRestart()");
+        if(businessLogicAdapter != null)
+            setBLASettingsAndStartIt(0.1);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG,"onResume()");
-        if(soundAnalyzer!=null)
-            soundAnalyzer.ensureStarted();
+        Log.d(tag,"onResume()");
+        if(businessLogicAdapter != null)
+            setBLASettingsAndStartIt(0.1);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        Log.d(TAG,"onStart()");
-        if(soundAnalyzer!=null)
-            soundAnalyzer.start();
+        Log.d(tag, "onStart()");
+        if(businessLogicAdapter != null)
+            setBLASettingsAndStartIt(0.1);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        Log.d(TAG,"onStop()");
-        if(soundAnalyzer!=null)
-            soundAnalyzer.stop();
+        Log.d(tag, "onStop()");
+        if(businessLogicAdapter != null)
+            businessLogicAdapter.stopListening();
     }
 
     @Override
@@ -315,36 +315,36 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
             if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.BIG_FREQUENCY) {
                 mainMessage.setTextColor(Color.rgb(255,36,0));
                 mainMessage.setText("Too high frequency");
-                Log.e(TAG, "Too high frequency");
+                Log.e(tag, "Too high frequency");
             }
             else if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.BIG_VARIANCE) {
                 mainMessage.setTextColor(Color.rgb(255,36,0));
                 mainMessage.setText("Too big variance");
-                Log.e(TAG, "Too big variance");
+                Log.e(tag, "Too big variance");
             }
             else if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.ZERO_SAMPLES) {
                 mainMessage.setTextColor(Color.rgb(255,36,0));
                 mainMessage.setText("Less than 2 waves");
-                Log.e(TAG, "Less than 2 waves");
+                Log.e(tag, "Less than 2 waves");
             }
             else if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.TOO_QUIET) {
                 mainMessage.setTextColor(Color.rgb(255,36,0));
                 mainMessage.setText("Too quiet");
-                Log.e(TAG, "Too quiet");
+                Log.e(tag, "Too quiet");
             }
             else if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.NO_PROBLEMS)
             {
                 mainMessage.setTextColor(Color.rgb(34,139,34));
                 mainMessage.setText("Frequency: " + frequency);
                 gauge.setSpeed(frequency);
-                Log.e(TAG, "Sample OK, freq = " + frequency);
+                Log.e(tag, "Sample OK, freq = " + frequency);
             }
             else {
-                Log.e(TAG, "UiController: Unknown class of message.");
+                Log.e(tag, "UiController: Unknown class of message.");
             }
             if(ConfigFlags.uiControlerInformsWhatItKnowsAboutSound)
                 result.getDebug();
-            //Log.e(TAG,"Frequency: " + frequency);
+            //Log.e(tag,"Frequency: " + frequency);
             /*} else if(obj instanceof SoundAnalyzer.ArrayToDump) {
                 SoundAnalyzer.ArrayToDump a = (SoundAnalyzer.ArrayToDump)obj;
                 ui.dumpArray(a.arr, a.elements);
@@ -357,8 +357,8 @@ class MainActivity extends Activity implements Observer, BusinessLogicAdapterLis
     }
 
     @Override
-    public void onNewNotesOrPausesAvailable(List<Note> notes) {
-
+    public void onNewNotesOrPausesAvailable(Note[] notes) {
+        chartController.drawNotes(notes);
     }
 
     @Override

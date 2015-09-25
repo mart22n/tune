@@ -1,12 +1,12 @@
 package com.tune;
 
-import java.util.List;
+import com.tune.businesslogic.Note;
 
 /**
  * Created by mart22n on 25.08.2015.
  */
 public class ChartController {
-    void drawNotes(List<Note> notes) {
-        throw new UnsupportedOperationException();
+    void drawNotes(Note[] notes) {
+        //throw new UnsupportedOperationException();
     }
 }

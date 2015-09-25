@@ -1,4 +1,4 @@
-package com.tune;
+package com.tune.businesslogic;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,14 +9,14 @@ import java.util.List;
  * same note. It is +/- 45 cents around a note freq. The zone 45-50 cents around a note freq is
  * borderline zone, where note cannot be identified
  */
-class NoteAndDeviationIdentifier {
+public class NoteAndDeviationIdentifier {
 
-    static class NoteIdentifierSettings {
-        int measurementWindowMs;
-        int minNoteLenMs;
-        double referenceFreq;
-        int octaveSpan; // this many octaves can a note be below or above reference freq to still be valid
-        int deviationWhereBorderLineStarts;
+    public static class NoteIdentifierSettings {
+        public int measurementWindowMs;
+        public int minNoteLenMs;
+        public double referenceFreq;
+        public int octaveSpan; // this many octaves can a note be below or above reference freq to still be valid
+        public int deviationWhereBorderLineStarts;
     }
 
     private int measurementWindowMs;
@@ -52,6 +52,9 @@ class NoteAndDeviationIdentifier {
 
         for(int i = 0; i < inputWindows.length; ++i) {
             curNoteType = getNoteTypeFromInput(inputWindows[i]);
+            if(referenceFreq == -1 && curNoteType == Note.NoteType.VALIDNOTE) {
+                referenceFreq = inputWindows[i];
+            }
             ++noteLen;
             if (i > 0) {
                 if (newNoteBegan(inputWindows, curNoteType, i)) {
@@ -195,6 +198,8 @@ class NoteAndDeviationIdentifier {
             ret = Note.NoteType.PAUSE;
         else if(freq == -1)
             ret = Note.NoteType.NOISE;
+        else if(referenceFreq == -1)
+            ret = Note.NoteType.VALIDNOTE;
         else if(freqFallsOutsideValidOctaveSpan(freq))
             ret = Note.NoteType.OUTOFRANGE;
         else {

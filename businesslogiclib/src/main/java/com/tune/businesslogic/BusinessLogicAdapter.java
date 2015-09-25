@@ -1,4 +1,4 @@
-package com.tune;
+package com.tune.businesslogic;
 
 import android.util.Pair;
 
@@ -6,9 +6,10 @@ import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
-class BusinessLogicAdapter extends Observable implements Observer  {
+public class BusinessLogicAdapter extends Observable implements Observer  {
     private AudioRecordListener audioRecordListener;
     private FrequencyExtractor frequencyExtractor;
+    private NoteAndDeviationIdentifier noteAndDeviationIdentifier;
     private BusinessLogicAdapterListener blaListener;
 
     private HarmonicsRemover harmonicsRemover;
@@ -23,6 +24,12 @@ class BusinessLogicAdapter extends Observable implements Observer  {
         s.sampleRate = AudioRecordListener.SAMPLE_RATE_STANDARD;
         frequencyExtractor = new FrequencyExtractor(s);
         frequencyExtractor.addObserver(this);
+        NoteAndDeviationIdentifier.NoteIdentifierSettings noteIdentifierSettings = new NoteAndDeviationIdentifier.NoteIdentifierSettings();
+        noteIdentifierSettings.deviationWhereBorderLineStarts = 40;
+        noteIdentifierSettings.measurementWindowMs = 30;
+        noteIdentifierSettings.minNoteLenMs = 100;
+        noteIdentifierSettings.octaveSpan = 2;
+        noteAndDeviationIdentifier = new NoteAndDeviationIdentifier(noteIdentifierSettings);
         this.blaListener = blaListener;
     }
 
@@ -34,7 +41,10 @@ class BusinessLogicAdapter extends Observable implements Observer  {
         else {
             double[] samples = (double[]) data;
             samples = harmonicsRemover.removeHarmonics(samples, samples.length);
-            frequencyExtractor.extractFrequencies(samples);
+            double[] freqs = frequencyExtractor.extractFrequencies(samples);
+            Note[] notes = noteAndDeviationIdentifier.convertWaveformToNotes(freqs);
+            blaListener.onNewNotesOrPausesAvailable(notes);
+
             // control goes to FE -> SPF->VD->NE->DF->NI
             //blaListener.onFirstNoteDetected(new Note());
         }
@@ -45,11 +55,19 @@ class BusinessLogicAdapter extends Observable implements Observer  {
     }
 
     public void startListeningTune() {
-        throw new UnsupportedOperationException();
+        audioRecordListener.start();
     }
 
     public void stopListening() {
-        throw new UnsupportedOperationException();
+        audioRecordListener.stop();
+    }
+
+    public void setFrequencyExtractorOptions(FrequencyExtractor.FrequencyExtractorSettings s){
+        frequencyExtractor = new FrequencyExtractor(s);
+    }
+
+    public void setNoteIdentifierOptions(NoteAndDeviationIdentifier.NoteIdentifierSettings s){
+        noteAndDeviationIdentifier = new NoteAndDeviationIdentifier(s);
     }
 
     public List<Pair<Short, Short> > trendLineOfLastDeviations(int howMany){

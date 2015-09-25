@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+    <TextView android:id="@+id/startmessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/welcome_text"
+        android:textColor="#FFFFFFFF"
+        android:textSize="@dimen/abc_text_size_headline_material"
+        android:background="#00000000"/>
+    <TextView android:id="@+id/filler"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="\n\n\n\n\n\n\n"
+        android:textColor="#FFFFFFFF"
+        android:textSize="@dimen/abc_text_size_headline_material"
+        android:background="#00000000"/>
+    <ImageButton android:id="@+id/mikebutton"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:background="#000000"
+        android:layout_gravity="center"
+        android:src="@drawable/mike_enabled"/>
+
+</LinearLayout>

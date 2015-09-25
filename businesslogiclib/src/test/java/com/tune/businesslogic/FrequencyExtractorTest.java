@@ -1,4 +1,4 @@
-package com.tune;
+package com.tune.businesslogic;
 
 import junit.framework.Assert;
 

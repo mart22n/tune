@@ -2,4 +2,6 @@
 <resources>
     <string name="app_name">Tune</string>
     <string name="action_settings">Settings</string>
+    <string name="welcome_text">\n\n\n\nWelcome to Tune! To start, tap the microphone image and start singing. When you are done singing, tap Stop button.</string>
+    <string name="tag">tune</string>
 </resources>

@@ -1,4 +1,4 @@
-package com.tune;
+package com.tune.businesslogic;
 import org.junit.*;
 import static org.junit.Assert.*;
 

@@ -1,4 +1,4 @@
-package com.tune;
+package com.tune.businesslogic;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * Created by mart22n on 22.08.2015.
  */
-class Note {
+public class Note {
     enum NoteType { UNDEFINED, PAUSE, VALIDNOTE, NOISE, BORDERLINE, OUTOFRANGE };
     private String name;
     int degree; // 0 - reference note; 12 - 1 octave up; -12 - 1 octave down

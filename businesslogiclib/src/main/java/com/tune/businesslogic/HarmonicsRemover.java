@@ -1,4 +1,4 @@
-package com.tune;
+package com.tune.businesslogic;
 
 import edu.emory.mathcs.jtransforms.fft.DoubleFFT_1D;
 
