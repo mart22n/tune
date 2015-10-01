@@ -41,7 +41,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
     ImageButton stopStartButton;
     BusinessLogicAdapter businessLogicAdapter;
     AudioRecordListener audioRecordListener;
-    private boolean started;
+    private boolean listening;
     private int positionNotificationPeriodMs; //TODO: into settings
     private ChartController chartController;
     FrequencyExtractor.FrequencyExtractorSettings FESettings;
@@ -57,7 +57,6 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         FESettings = new FrequencyExtractor.FrequencyExtractorSettings();
         createChart();
         createGauge();
-        started = true;
         positionNotificationPeriodMs = 400;
         audioRecordListener = new AudioRecordListenerImpl(this.getApplicationContext());
         try {
@@ -72,19 +71,21 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         businessLogicAdapter = new BusinessLogicAdapter(audioRecordListener, this);
         businessLogicAdapter.addObserver(this);
         chartController = new ChartController();
-        setBLASettingsAndStartIt(0.1);
         stopStartButton = (ImageButton) findViewById(R.id.startStopButton);
+        stopStartButton.setImageResource(R.drawable.stop);
+        listening = true;
+        businessLogicAdapter.startListeningTune();
         stopStartButton.setOnClickListener(new ImageButton.OnClickListener() {
                                                public void onClick(View v) {
                                                    try {
-                                                       if (started == true) {
+                                                       if (listening == true) {
                                                            stopStartButton.setImageResource(R.drawable.mike_enabled);
-                                                           started = false;
+                                                           listening = false;
                                                            findViewById(R.id.action_settings).setEnabled(true);
                                                            businessLogicAdapter.stopListening();
                                                        } else {
                                                            stopStartButton.setImageResource(R.drawable.stop);
-                                                           started = true;
+                                                           listening = true;
                                                            SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
                                                            double diff = 0.1;//Double.parseDouble(sharedPref.getString(getString(R.string.pref_default_max_diff_in_percent), "0.1"));
                                                            Toast.makeText(MainActivity.this, Double.toString(diff), Toast.LENGTH_SHORT).show();
@@ -109,7 +110,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         NDISettings.minNoteLenMs = 100;
         NDISettings.octaveSpan = 2;
         businessLogicAdapter.setNoteIdentifierOptions(NDISettings);
-        businessLogicAdapter.startListeningTune();//TODO:uncomment
+        businessLogicAdapter.startListeningTune();
     }
 
     private void createGauge() {
@@ -157,8 +158,8 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         ll.setLineWidth(4f);
         lineChart.getXAxis().addLimitLine(ll);*/
 
-        lineChart.getAxisLeft().setAxisMaxValue(60);    // max deviation = +/-50 cents
-        lineChart.getAxisLeft().setAxisMinValue(-60);
+        lineChart.getAxisLeft().setAxisMaxValue(55);    // max deviation = +/-50 cents
+        lineChart.getAxisLeft().setAxisMinValue(-55);
         lineChart.getAxisLeft().setStartAtZero(false);
 
         lineChart.getAxisLeft().setEnabled(true);
@@ -266,89 +267,51 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
     }
 
     @Override
+    /**called when another activity comes in front of the activity*/
     protected void onPause() {
         super.onPause();
-        Log.d(tag,"onPause()");
+        Log.d(tag, "onPause()");
+        listening = false;
+        stopStartButton.setImageResource(R.drawable.mike_enabled);
         if(businessLogicAdapter != null)
             businessLogicAdapter.stopListening();
     }
 
     @Override
+    /**called when the activity comes back to the foreground after user has pressed e.g. home button and has restarted app thereafter*/
     protected void onRestart() {
         super.onRestart();
         Log.d(tag,"onRestart()");
-        if(businessLogicAdapter != null)
-            setBLASettingsAndStartIt(0.1);
+        stopStartButton.setImageResource(R.drawable.mike_enabled);
+        listening = false;
     }
 
     @Override
+    /**called when activity will start interacting with the user.*/
     protected void onResume() {
         super.onResume();
         Log.d(tag,"onResume()");
-        if(businessLogicAdapter != null)
-            setBLASettingsAndStartIt(0.1);
     }
 
     @Override
+    /**called when activity is becoming visible to the user.*/
     protected void onStart() {
         super.onStart();
         Log.d(tag, "onStart()");
-        if(businessLogicAdapter != null)
-            setBLASettingsAndStartIt(0.1);
     }
 
     @Override
+    /**user has pressed e.g. home button*/
     protected void onStop() {
         super.onStop();
         Log.d(tag, "onStop()");
+        listening = false;
         if(businessLogicAdapter != null)
             businessLogicAdapter.stopListening();
     }
 
     @Override
     public void update(Observable who, Object obj) {
-        //if obj instanceof BusinessLogicAdapter
-            //if(obj instanceof SoundAnalyzer.AnalyzedSound) {
-            SoundAnalyzer.AnalyzedSound result = (SoundAnalyzer.AnalyzedSound)obj;
-            // result.getDebug();
-            frequency = result.frequency;//FrequencySmoothener.getSmoothFrequency(result);
-            if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.BIG_FREQUENCY) {
-                mainMessage.setTextColor(Color.rgb(255,36,0));
-                mainMessage.setText("Too high frequency");
-                Log.e(tag, "Too high frequency");
-            }
-            else if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.BIG_VARIANCE) {
-                mainMessage.setTextColor(Color.rgb(255,36,0));
-                mainMessage.setText("Too big variance");
-                Log.e(tag, "Too big variance");
-            }
-            else if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.ZERO_SAMPLES) {
-                mainMessage.setTextColor(Color.rgb(255,36,0));
-                mainMessage.setText("Less than 2 waves");
-                Log.e(tag, "Less than 2 waves");
-            }
-            else if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.TOO_QUIET) {
-                mainMessage.setTextColor(Color.rgb(255,36,0));
-                mainMessage.setText("Too quiet");
-                Log.e(tag, "Too quiet");
-            }
-            else if(result.error== SoundAnalyzer.AnalyzedSound.ReadingType.NO_PROBLEMS)
-            {
-                mainMessage.setTextColor(Color.rgb(34,139,34));
-                mainMessage.setText("Frequency: " + frequency);
-                gauge.setSpeed(frequency);
-                Log.e(tag, "Sample OK, freq = " + frequency);
-            }
-            else {
-                Log.e(tag, "UiController: Unknown class of message.");
-            }
-            if(ConfigFlags.uiControlerInformsWhatItKnowsAboutSound)
-                result.getDebug();
-            //Log.e(tag,"Frequency: " + frequency);
-            /*} else if(obj instanceof SoundAnalyzer.ArrayToDump) {
-                SoundAnalyzer.ArrayToDump a = (SoundAnalyzer.ArrayToDump)obj;
-                ui.dumpArray(a.arr, a.elements);
-            }*/
     }
 
     @Override

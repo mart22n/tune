@@ -8,14 +8,15 @@ import android.util.Pair;
 
 import com.tune.businesslogic.AudioRecordListener;
 
+import java.io.EOFException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by mart22n on 22.08.2015.
  */
-public class AudioRecordListenerImpl extends java.util.Observable implements
-AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
+public class AudioRecordListenerImpl extends AudioRecordListener implements
+AudioRecord.OnRecordPositionUpdateListener {
 
     boolean shouldAudioReaderThreadDie;
     private Thread audioReaderThread;
@@ -24,7 +25,7 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
     private int channelConf;
     private int audioFmt;
     private int sampleRt;
-    private int bufSize;
+    private int sampleLen = 7200;
     private short[] audioSamples;
     private double[] pressureValues;
     private String tag;
@@ -37,6 +38,8 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
 
     AudioRecordListenerImpl(Context c) {
         tag = c.getResources().getString(R.string.tag);
+        circularBuffer = new CircularBuffer(sampleLen);
+        pressureValues = new double[4 * sampleLen + 100];
         lock = new ReentrantLock();
     }
 
@@ -48,12 +51,17 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
         sampleRt = sampleRate;
         audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channelConfig,
                 audioFormat, getMinBufferSize());
+        audioRecord.setRecordPositionUpdateListener(this);
         setPositionNotificationPeriod(positionNotificationPeriodMs);
+        if(audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
+            Log.e(tag, "Could not initialize microphone.");
+        }
+        audioSamples = new short[sampleLen];
     }
 
     private boolean setPositionNotificationPeriod(int ms) {
         if(audioRecord.setPositionNotificationPeriod(
-                (int)(ms*AUDIO_SAMPLING_RATE / 1000)) !=
+                (int) (ms * AUDIO_SAMPLING_RATE / 1000)) !=
                 AudioRecord.SUCCESS) {
             Log.e(tag, "Invalid notify rate.");
             return false;
@@ -68,7 +76,6 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
     /**
      * Here observers are notified of new available data from AudioRecord. Data is pulled as an array
      * of doubles from circularBuffer and given to observers, using notifyObservers().
-     * @param recorder
      */
     @Override
     public void onPeriodicNotification(AudioRecord recorder) {
@@ -76,25 +83,20 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
             @Override
             public void run() {
             if(!lock.tryLock()) {
-                Log.e(tag, "Analyzing algorithm is too slow. Dropping sample");
+                //Log.e(tag, "Analyzing algorithm is too slow. Dropping sample"); //TODO: uncomment
                 return;
             }
-            double[] pressureValues = new double[4 * bufSize + 100];
             int elementsRead =
                     circularBuffer.getElements(pressureValues, 0, maxSampleSize);
             if(elementsRead == maxSampleSize) {
                 Log.e(tag, "Too many samples read from circular buffer");
             }
-            notifyObservers(new Pair<double[ ], Integer>(pressureValues, elementsRead));
+            setChanged();
+            notifyObservers(new Pair<double[], Integer>(pressureValues, elementsRead));
 
             lock.unlock();
             }
         }).start();
-    }
-
-    @Override
-    public int sampleRate() {
-        return sampleRt;
     }
 
     /**
@@ -102,11 +104,18 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
      */
     @Override
     public void start() {
+        audioRecord.startRecording();
         shouldAudioReaderThreadDie = false;
         audioReaderThread = new Thread(new Runnable() {
             public void run() {
                 while(!shouldAudioReaderThreadDie) {
-                    int shortsRead = audioRecord.read(audioSamples,0,bufSize);
+                    int shortsRead = 0;
+                    try {
+                        shortsRead = audioRecord.read(audioSamples,0, sampleLen);
+                    }
+                    catch (Exception e) {
+                        Log.e(tag, "Exception in audiorecord.read(): " + e.getMessage());
+                    }
                     if(shortsRead < 0) {
                         Log.e(tag, "Could not read audio data.");
                     } else {
@@ -130,6 +139,7 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
         } catch(Exception e) {
             Log.e(tag, "Could not join audioReaderThread: " + e.getMessage());
         }
+        audioRecord.stop();
     }
 
     /**
@@ -140,11 +150,10 @@ AudioRecord.OnRecordPositionUpdateListener, AudioRecordListener {
      * will be polled for new data.
      **/
     private int getMinBufferSize() {
-        bufSize = AudioRecord.getMinBufferSize(sampleRt,
+        int bufSize = AudioRecord.getMinBufferSize(sampleRt,
                 channelConf,
                 audioFmt)
                 * 2;
-        pressureValues = new double[4 * bufSize + 100];
         return bufSize;
     }
 }

@@ -1,9 +1,11 @@
 package com.tune.businesslogic;
 
+import java.util.Observable;
+
 /**
  * Created by mart22n on 22.08.2015.
  */
-public interface AudioRecordListener {
+public abstract class AudioRecordListener extends Observable {
     // constants copied from audioformat.java
     public static final int CHANNEL_IN_FRONT = 0x10;
     public static final int CHANNEL_IN_MONO = CHANNEL_IN_FRONT;
@@ -18,12 +20,10 @@ public interface AudioRecordListener {
      * @param positionNotificationPeriodMs - max period between notifications of new available audio samples.
      * It is possible for notifications to be lost if the period is too small.
      */
-    public void setAudioRecordOptions(int channelConfig, int audioFormat, int sampleRate,
+    public abstract void setAudioRecordOptions(int channelConfig, int audioFormat, int sampleRate,
                                       int positionNotificationPeriodMs);
 
-    public int sampleRate();
+    public abstract void start();
 
-    public void start();
-
-    public void stop();
+    public abstract void stop();
 }

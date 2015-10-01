@@ -12,7 +12,7 @@ public class FrequencyExtractor extends Observable {
     private ReadingType readingType = ReadingType.ERROR;
     private double loudnessThreshold = 30;
     private int nofConsecutiveUpwardsCrossingsToMeasure = 4;
-    private double measurementWindowMs = 30;
+    private double measurementWindowMs = 100;
 
     private double[] prevInputsLastWindowSamples;
     private int nofSamplesInWindow;
@@ -67,9 +67,11 @@ public class FrequencyExtractor extends Observable {
              * measurement window in previous samples array is concatenated with the first measurement
              * window in new samples array.
              * @param samples
+             * @param samplesBeforeAutoCorrelation - original samples from audiorecord, used for
+             *                                     measuring loudness
              * @return
              */
-    public double[] extractFrequencies(double[] samples) {
+    public double[] extractFrequencies(double[] samples, double[] samplesBeforeAutoCorrelation) {
         int windowIndex = 0;
         if(samples.length < nofSamplesInWindow) {
             readingType = ReadingType.ONLY_SINGLE_PARTIAL_WINDOW_IN_INPUT;
@@ -82,11 +84,13 @@ public class FrequencyExtractor extends Observable {
 
         if(nofSamplesInPrevInputsLastWindow > 0) {
             double[] concatenatedWindow = new double[nofSamplesInWindow];
+            double[] concatenatedWindowForpauses = new double[nofSamplesInWindow];
             offsetInSamples = nofSamplesInWindow - nofSamplesInPrevInputsLastWindow;
             if(finalWindowIsFullLengthInCurrentInput(samples, offsetInSamples))
                 ret = new double[ret.length + 1];
             copySamplesFromPrevInputAndFirstSamplesInCurrentInputIntoConcatenatedWindow(samples, nofSamplesInWindow, concatenatedWindow);
-            if(isPause(concatenatedWindow, 0) == true) {
+            copySamplesFromPrevInputAndFirstSamplesInCurrentInputIntoConcatenatedWindow(samplesBeforeAutoCorrelation, nofSamplesInWindow, concatenatedWindowForpauses);
+            if(isPause(concatenatedWindowForpauses, 0) == true) {
                 ret[windowIndex++] = 0;
             }
             else {
@@ -94,7 +98,7 @@ public class FrequencyExtractor extends Observable {
             }
         }
 
-        findFreqForEachWindow(samples, ret, windowIndex, offsetInSamples);
+        findFreqForEachWindow(samples, samplesBeforeAutoCorrelation, ret, windowIndex, offsetInSamples);
         readingType = ReadingType.OK;
         return ret;
     }
@@ -103,7 +107,7 @@ public class FrequencyExtractor extends Observable {
         return (samples.length - offsetInSamples) % nofSamplesInWindow == 0;
     }
 
-    private void findFreqForEachWindow(double[] samples, double[] ret, int windowIndex, int offsetOfFirstWindowInSamples) {
+    private void findFreqForEachWindow(double[] samples, double[] samplesBeforeAutocorrelation, double[] ret, int windowIndex, int offsetOfFirstWindowInSamples) {
         for(int offsetOfWindowInSamples = offsetOfFirstWindowInSamples; offsetOfWindowInSamples <
                 samples.length; offsetOfWindowInSamples += nofSamplesInWindow) {
 
@@ -112,7 +116,7 @@ public class FrequencyExtractor extends Observable {
                 break;
             }
             else {
-                if (isPause(samples, offsetOfWindowInSamples) == true)
+                if (isPause(samplesBeforeAutocorrelation, offsetOfWindowInSamples) == true)
                     ret[windowIndex++] = 0;
                 else
                     ret[windowIndex++] = findNonzeroFreqInWindow(samples, offsetOfWindowInSamples);
@@ -210,7 +214,7 @@ public class FrequencyExtractor extends Observable {
         return this.readingType;
     }
 
-    private boolean isPause(double[] samples, int offset) {
+    public boolean isPause(double[] samples, int offset) {
         double loudness = 0.0;
         for(int i=offset; i<offset + nofSamplesInWindow; ++i)
             loudness+=Math.abs(samples[i]);

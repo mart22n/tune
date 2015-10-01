@@ -9,10 +9,15 @@ public class HarmonicsRemover {
 
     private int currentFftMethodSize = -1;
     private DoubleFFT_1D fft_method;
+    private int sampleLen = 7200;
     private double sq(double a) { return a*a; };
 
     private double hanning(int n, int N) {
         return 0.5*(1.0 -Math.cos(2*Math.PI*(double)n/(double)(N-1)));
+    }
+
+    HarmonicsRemover() {
+        fft_method = new DoubleFFT_1D(sampleLen);
     }
 
     double[] removeHarmonics(double[] sample, int sampleSize) {
