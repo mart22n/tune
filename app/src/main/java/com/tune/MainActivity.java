@@ -3,13 +3,21 @@ package com.tune;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.Point;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -17,9 +25,9 @@ import android.widget.Toast;
 import com.cardiomood.android.controls.gauge.SpeedometerGauge;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.XAxis;
-import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.data.Entry;
 import com.tune.businesslogic.AudioRecordListener;
 import com.tune.businesslogic.BusinessLogicAdapter;
 import com.tune.businesslogic.BusinessLogicAdapterListener;
@@ -34,7 +42,6 @@ import java.util.Observer;
 public class MainActivity extends Activity implements Observer, BusinessLogicAdapterListener {
 
     public static final String tag = "tune";
-    private TextView mainMessage = null;
     private double frequency;
     private SpeedometerGauge gauge;
     LineChart lineChart;
@@ -42,7 +49,6 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
     BusinessLogicAdapter businessLogicAdapter;
     AudioRecordListener audioRecordListener;
     private boolean listening;
-    private int positionNotificationPeriodMs; //TODO: into settings
     private ChartController chartController;
     FrequencyExtractor.FrequencyExtractorSettings FESettings;
     NoteAndDeviationIdentifier.NoteIdentifierSettings NDISettings;
@@ -53,16 +59,17 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         setContentView(R.layout.activity_main);
         gauge = (SpeedometerGauge)findViewById(R.id.speedometer);
         lineChart = (LineChart)findViewById(R.id.chart);
-        mainMessage = (TextView)findViewById(R.id.mainMessage);
+        if(this.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            ViewGroup vg = (ViewGroup)(gauge.getParent());
+            vg.removeView(gauge);
+        }
+
         FESettings = new FrequencyExtractor.FrequencyExtractorSettings();
-        createChart();
         createGauge();
-        positionNotificationPeriodMs = 400;
-        audioRecordListener = new AudioRecordListenerImpl(this.getApplicationContext());
+        audioRecordListener = new AudioRecordListenerImplForTesting(this.getApplicationContext());
         try {
             audioRecordListener.setAudioRecordOptions(AudioRecordListener.CHANNEL_IN_FRONT,
-                    AudioRecordListener.ENCODING_PCM_16BIT, AudioRecordListener.SAMPLE_RATE_STANDARD,
-                    positionNotificationPeriodMs);
+                    AudioRecordListener.ENCODING_PCM_16BIT);
         }
         catch(Exception e) {
             Toast.makeText(this, "The are problems with your microphone, app won't work.", Toast.LENGTH_LONG).show();
@@ -70,7 +77,8 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         }
         businessLogicAdapter = new BusinessLogicAdapter(audioRecordListener, this);
         businessLogicAdapter.addObserver(this);
-        chartController = new ChartController();
+        chartController = new ChartController(1, 100, lineChart, getWindowManager());
+        chartController.initChart(this.getResources().getConfiguration().orientation);
         stopStartButton = (ImageButton) findViewById(R.id.startStopButton);
         stopStartButton.setImageResource(R.drawable.stop);
         listening = true;
@@ -133,100 +141,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         gauge.addColoredRange(180, 400, Color.RED);
     }
 
-    private void createChart() {
 
-        lineChart.setBackgroundColor(Color.BLACK);
-        lineChart.setTouchEnabled(true);
-        lineChart.setDragEnabled(true);
-        lineChart.setScaleXEnabled(true);
-        lineChart.setScaleYEnabled(false);
-        lineChart.setDragDecelerationFrictionCoef(0.85f);
-        lineChart.setMinimumHeight(500);
-        lineChart.setDescription("");
-        lineChart.getLegend().setEnabled(false);
-
-        lineChart.getXAxis().setEnabled(true);
-        lineChart.getXAxis().setDrawAxisLine(true);
-/*        barChart.getXAxis().setDrawGridLines(true);
-        barChart.getXAxis().setGridColor(Color.WHITE);*/
-        lineChart.getXAxis().setAxisLineColor(Color.WHITE);
-        lineChart.getXAxis().setTextColor(Color.WHITE);
-        // define where to add labels of x-axis
-        lineChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
-/*        LimitLine ll = new LimitLine(2f, "150");
-        ll.setLineColor(Color.YELLOW);
-        ll.setLineWidth(4f);
-        lineChart.getXAxis().addLimitLine(ll);*/
-
-        lineChart.getAxisLeft().setAxisMaxValue(55);    // max deviation = +/-50 cents
-        lineChart.getAxisLeft().setAxisMinValue(-55);
-        lineChart.getAxisLeft().setStartAtZero(false);
-
-        lineChart.getAxisLeft().setEnabled(true);
-        lineChart.getAxisLeft().setDrawAxisLine(true);
-        lineChart.getAxisLeft().setTextColor(Color.WHITE);
-        lineChart.getAxisLeft().setAxisLineColor(Color.WHITE);
-
-        ArrayList<Entry> note1 = new ArrayList<Entry>();
-        Entry e = new Entry(40f, 0);
-        note1.add(e);
-        e = new Entry(40f, 1);
-        note1.add(e);
-
-        ArrayList<Entry> note2 = new ArrayList<Entry>();
-        e = new Entry(40f, 3);
-        note2.add(e);
-        e = new Entry(35f, 4);
-        note2.add(e);
-        e = new Entry(45f, 5);
-        note2.add(e);
-
-        ArrayList<Entry> note3 = new ArrayList<Entry>();
-        e = new Entry(0f, 6);
-        note3.add(e);
-        e = new Entry(10f, 7);
-        note3.add(e);
-        e = new Entry(-20f, 8);
-        note3.add(e);
-        e = new Entry(-20f, 9);
-        note3.add(e);
-
-        LineDataSet dsNote1 = new LineDataSet(note1, "");
-        dsNote1.setDrawCubic(true);
-        dsNote1.setCubicIntensity(0.2f);
-        dsNote1.setDrawFilled(true);
-        dsNote1.setFillColor(Color.WHITE);
-        dsNote1.setFillAlpha(254);
-
-        LineDataSet dsNote2 = new LineDataSet(note2, "");
-        dsNote2.setDrawCubic(true);
-        dsNote2.setCubicIntensity(0.2f);
-        dsNote2.setDrawFilled(true);
-        dsNote2.setFillColor(Color.WHITE);
-        dsNote2.setFillAlpha(254);
-
-
-        LineDataSet dsNote3 = new LineDataSet(note3, "");
-        dsNote3.setDrawCubic(true);
-        dsNote3.setCubicIntensity(0.2f);
-        dsNote3.setDrawFilled(true);
-        dsNote3.setFillColor(Color.WHITE);
-        dsNote3.setFillAlpha(255);
-
-        ArrayList<LineDataSet> dataSets = new ArrayList<LineDataSet>();
-        dataSets.add(dsNote1);
-        dataSets.add(dsNote2);
-        dataSets.add(dsNote3);
-
-        ArrayList<String> xVals = new ArrayList<String>();
-        xVals.add("E"); xVals.add(""); xVals.add(""); xVals.add("F");
-        xVals.add(""); xVals.add(""); xVals.add("G"); xVals.add("");
-        xVals.add("");
-
-        LineData data = new LineData(xVals, dataSets);
-        lineChart.setData(data);
-        lineChart.invalidate(); // refresh
-    }
 
 
     @Override
@@ -242,7 +157,6 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             try {
@@ -320,12 +234,31 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
     }
 
     @Override
-    public void onNewNotesOrPausesAvailable(Note[] notes) {
-        chartController.drawNotes(notes);
+    public void onNewNotesOrPausesAvailable(final Note[] notes) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                chartController.drawNotes(notes);
+            }
+        });
     }
 
     @Override
     public void onToastNotification(String notification) {
         Toast.makeText(this, notification, Toast.LENGTH_LONG).show();
     }
+
+ /*   @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+
+        // Checks the orientation of the screen
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            ViewGroup vg = (ViewGroup)(gauge.getParent());
+            vg.removeView(gauge);
+            //Toast.makeText(this, "landscape", Toast.LENGTH_SHORT).show();
+        } else if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT){
+            Toast.makeText(this, "portrait", Toast.LENGTH_SHORT).show();
+        }
+    }*/
 }

@@ -7,12 +7,12 @@ import java.util.List;
  * Created by mart22n on 22.08.2015.
  */
 public class Note {
-    enum NoteType { UNDEFINED, PAUSE, VALIDNOTE, NOISE, BORDERLINE, OUTOFRANGE };
+    public enum NoteType { UNDEFINED, PAUSE, VALIDNOTE, NOISE, BORDERLINE, OUTOFRANGE };
     private String name;
     int degree; // 0 - reference note; 12 - 1 octave up; -12 - 1 octave down
-    int length;
-    private List<Integer> deviations; // list of deviations for the note
-    NoteType type;
+    public int lengthMs;
+    public List<Integer> deviations; // list of deviations for the note
+    public NoteType type;
 
     Note() {
         this.type = NoteType.UNDEFINED;
@@ -23,7 +23,7 @@ public class Note {
         this.type = orig.type;
         this.name = orig.name;
         this.degree = orig.degree;
-        this.length = orig.length;
+        this.lengthMs = orig.lengthMs;
         this.deviations = orig.deviations;
     }
 
@@ -33,7 +33,7 @@ public class Note {
             this.type = NoteType.BORDERLINE;
     }
 
-    int getDeviation(int index) {
+    public int getDeviation(int index) {
         return deviations.get(index);
     }
 

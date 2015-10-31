@@ -17,8 +17,9 @@ public class FrequencyExtractorTest {
         int nofConsecutiveCrossingsToMeasure = 5;
         int maxDiffInPercent = 1;
         int  measurementWindowMs = 30;
+        int gapBetweenSamplesWhenDetectingPause = 1;
         setFESettings(AudioRecordListener.SAMPLE_RATE_STANDARD, loudnessThreshold,
-                nofConsecutiveCrossingsToMeasure, measurementWindowMs, maxDiffInPercent);
+                nofConsecutiveCrossingsToMeasure, measurementWindowMs, maxDiffInPercent, gapBetweenSamplesWhenDetectingPause);
     }
 
     // test method to add two values
@@ -31,8 +32,8 @@ public class FrequencyExtractorTest {
                 -1, 1, 2, 1, 1, -1, -2, -1};
         int sampleRate = 1000;
         int measurementWindowLenMs = 32;
-        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1);
-        Assert.assertEquals(125, (int) frequencyExtractor.extractFrequencies(samples)[0]);
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
+        Assert.assertEquals(125, (int) frequencyExtractor.extractFrequencies(samples, samples, samples.length)[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
     }
 
@@ -46,8 +47,8 @@ public class FrequencyExtractorTest {
         };
         int sampleRate = 1000;
         int measurementWindowLenMs = 32;
-        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1);
-        Assert.assertEquals(125, (int) frequencyExtractor.extractFrequencies(samples)[0]);
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
+        Assert.assertEquals(125, (int) frequencyExtractor.extractFrequencies(samples, samples, samples.length)[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
     }
 
@@ -62,8 +63,8 @@ public class FrequencyExtractorTest {
         int sampleRate = 1000;
         int measurementWindowLenMs = 32;
         int loudnessThreshold = 30;
-        setFESettings(sampleRate, loudnessThreshold, 4, measurementWindowLenMs, 1);
-        Assert.assertEquals(0, (int) frequencyExtractor.extractFrequencies(samples)[0]);
+        setFESettings(sampleRate, loudnessThreshold, 4, measurementWindowLenMs, 1, 1);
+        Assert.assertEquals(0, (int) frequencyExtractor.extractFrequencies(samples, samples, samples.length)[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
     }
 
@@ -76,8 +77,8 @@ public class FrequencyExtractorTest {
         int loudnessThreshold = 1;
         int sampleRate = 1000;
         int measurementWindowLenMs = 16;
-        setFESettings(sampleRate, loudnessThreshold, 4, measurementWindowLenMs, 1);
-        Assert.assertEquals(250, (int) frequencyExtractor.extractFrequencies(samples)[0]);
+        setFESettings(sampleRate, loudnessThreshold, 4, measurementWindowLenMs, 1, 1);
+        Assert.assertEquals(250, (int) frequencyExtractor.extractFrequencies(samples, samples, samples.length)[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
     }
 
@@ -95,8 +96,8 @@ public class FrequencyExtractorTest {
         int sampleRate = 1000;
         int measurementWindowLenMs = 36;
         int nofCrossings = 6;
-        setFESettings(sampleRate, 0, nofCrossings, measurementWindowLenMs, 1);
-        Assert.assertEquals(-1, (int) frequencyExtractor.extractFrequencies(samples)[0]);
+        setFESettings(sampleRate, 0, nofCrossings, measurementWindowLenMs, 1, 1);
+        Assert.assertEquals(-1, (int) frequencyExtractor.extractFrequencies(samples, samples, samples.length)[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
     }
 
@@ -109,8 +110,8 @@ public class FrequencyExtractorTest {
         };
         int sampleRate = 1000;
         int measurementWindowLenMs = 24;
-        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1);
-        Assert.assertEquals(-1, (int) frequencyExtractor.extractFrequencies(samples)[0]);
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
+        Assert.assertEquals(-1, (int) frequencyExtractor.extractFrequencies(samples, samples, samples.length)[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
     }
 
@@ -148,8 +149,8 @@ public class FrequencyExtractorTest {
 
         int sampleRate = 1000;
         int measurementWindowLenMs = 37;
-        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1);
-        Assert.assertEquals(166, (int) frequencyExtractor.extractFrequencies(samples)[0]);
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
+        Assert.assertEquals(166, (int) frequencyExtractor.extractFrequencies(samples, samples, samples.length)[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
     }
 
@@ -157,7 +158,7 @@ public class FrequencyExtractorTest {
     public void ifPreviousInputHasAFullAndAPartialWindow_andNextInputHasTwoFullWindows_outputIs2CorrectFreqs() {
         int sampleRate = 1000;
         int measurementWindowLenMs = 50;
-        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1);
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
         double[] samples1 = {
                 0, 1, 0, -1, 0, 1, 0, -1, // window1: 50 samples, 250Hz
                 0, 1, 0, -1, 0, 1, 0, -1,
@@ -170,7 +171,7 @@ public class FrequencyExtractorTest {
                 0, -1, 0, 1, 1, 0, -1, 0,
                 1, 1, 0, -1};
 
-        double[] res = frequencyExtractor.extractFrequencies(samples1);
+        double[] res = frequencyExtractor.extractFrequencies(samples1, samples1, samples1.length);
         Assert.assertEquals(1, res.length);
         Assert.assertEquals(250.0, res[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
@@ -188,7 +189,7 @@ public class FrequencyExtractorTest {
                 0, 1, 1, 1, 0, -1
         };
 
-        res = frequencyExtractor.extractFrequencies(samples2);
+        res = frequencyExtractor.extractFrequencies(samples2, samples2, samples2.length);
         Assert.assertEquals(1, res.length);
         Assert.assertEquals(200.0, res[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
@@ -198,7 +199,7 @@ public class FrequencyExtractorTest {
     public void ifPreviousInputHasAFullAndAPartialWindow_andNextInputHasAFullAndALongPartialWindow_outputIs3CorrectFreqs() {
         int sampleRate = 1000;
         int measurementWindowLenMs = 50;
-        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1);
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
 
         double[] samples = {
                 0, 1, 1, 0, -1, -1,    // window 1: 50 samples of 166 Hz
@@ -216,7 +217,7 @@ public class FrequencyExtractorTest {
                 0, 1, 0, -1
         };
 
-        double[] res = frequencyExtractor.extractFrequencies(samples);
+        double[] res = frequencyExtractor.extractFrequencies(samples, samples, samples.length);
         Assert.assertEquals(1, res.length);
         Assert.assertEquals(166, (int) res[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
@@ -237,7 +238,7 @@ public class FrequencyExtractorTest {
                 0, 1, 1, 0, -1, -1,
                 0, 1};
 
-        res = frequencyExtractor.extractFrequencies(samples2);
+        res = frequencyExtractor.extractFrequencies(samples2, samples2, samples2.length);
         Assert.assertEquals(2, res.length);
         Assert.assertEquals(250.0, res[0]);
         Assert.assertEquals(166, (int)res[1]);
@@ -248,7 +249,7 @@ public class FrequencyExtractorTest {
    public void ifPrevInputIsLongAndLastInputHasOnlyPartialWindow_errorIsReturned() {
         int sampleRate = 1000;
         int measurementWindowLenMs = 50;
-        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1);
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
 
         double[] samples = {
                 0, 1, 1, 0, -1, -1,    // window 1: 50 samples of 166 Hz
@@ -265,7 +266,7 @@ public class FrequencyExtractorTest {
                 0, 1, 1, 1, 0, -1, -1, -1,
                 0, 1, 1, 1
         };
-        double[] res = frequencyExtractor.extractFrequencies(samples);
+        double[] res = frequencyExtractor.extractFrequencies(samples, samples, samples.length);
         Assert.assertEquals(1, res.length);
         Assert.assertEquals(166, (int) res[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
@@ -276,7 +277,7 @@ public class FrequencyExtractorTest {
                 0, 1, 1, 1
         };
 
-        res = frequencyExtractor.extractFrequencies(samples2);
+        res = frequencyExtractor.extractFrequencies(samples2, samples2, samples2.length);
         Assert.assertEquals(1, res.length);
         Assert.assertEquals(-1.0, res[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.ONLY_SINGLE_PARTIAL_WINDOW_IN_INPUT, frequencyExtractor.readingType());
@@ -295,8 +296,8 @@ public class FrequencyExtractorTest {
         };
         int sampleRate = 1000;
         int measurementWindowLenMs = 20;
-        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1);
-        double[] res = frequencyExtractor.extractFrequencies(samples);
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
+        double[] res = frequencyExtractor.extractFrequencies(samples, samples, samples.length);
         Assert.assertEquals(2, res.length);
         Assert.assertEquals(250.0,res[0]);
         Assert.assertEquals(250.0,res[1]);
@@ -315,21 +316,22 @@ public class FrequencyExtractorTest {
 
         int sampleRate = 1000;
         int measurementWindowLenMs = 18;
-        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1);
-        double[] res = frequencyExtractor.extractFrequencies(samples);
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
+        double[] res = frequencyExtractor.extractFrequencies(samples, samples, samples.length);
         Assert.assertEquals(1, res.length);
         Assert.assertEquals(-1.0,res[0]);
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
     }
 
     private void setFESettings(int sampleRate, int loudnessThreshold, int nofConsecutiveCrossingsToMeasure,
-                               double measurementWindowMs, double maxDiffInPercent) {
+                               double measurementWindowMs, double maxDiffInPercent, int gapBetweenSamplesWhenDetectingPause) {
         FrequencyExtractor.FrequencyExtractorSettings s = new FrequencyExtractor.FrequencyExtractorSettings();
+        s.sampleRate = sampleRate;
         s.loudnessThreshold = loudnessThreshold;
         s.maxDiffInPercent = maxDiffInPercent;
         s.measurementWindowMs = measurementWindowMs;
         s.setNofConsecutiveUpwardsCrossingsToMeasure(nofConsecutiveCrossingsToMeasure);
-        s.sampleRate = sampleRate;
+        s.gapBetweenSamplesWhenDetectingPause = gapBetweenSamplesWhenDetectingPause;
         frequencyExtractor = new FrequencyExtractor(s);
 
     }

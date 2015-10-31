@@ -14,7 +14,6 @@ public class NoteAndDeviationIdentifier {
     public static class NoteIdentifierSettings {
         public int measurementWindowMs;
         public int minNoteLenMs;
-        public double referenceFreq;
         public int octaveSpan; // this many octaves can a note be below or above reference freq to still be valid
         public int deviationWhereBorderLineStarts;
     }
@@ -31,10 +30,9 @@ public class NoteAndDeviationIdentifier {
     NoteAndDeviationIdentifier(NoteIdentifierSettings settings) {
         this.measurementWindowMs = settings.measurementWindowMs;
         this.minNoteLenMs = settings.minNoteLenMs;
-        this.referenceFreq = settings.referenceFreq;
+        this.referenceFreq = -1;
         this.octaveSpan = settings.octaveSpan;
         this.deviationWhereBorderLineStarts = settings.deviationWhereBorderLineStarts;
-        calculateDegreeFreqs();
         curNote = new Note();
     }
 
@@ -54,11 +52,12 @@ public class NoteAndDeviationIdentifier {
             curNoteType = getNoteTypeFromInput(inputWindows[i]);
             if(referenceFreq == -1 && curNoteType == Note.NoteType.VALIDNOTE) {
                 referenceFreq = inputWindows[i];
+                calculateDegreeFreqs();
             }
             ++noteLen;
             if (i > 0) {
                 if (newNoteBegan(inputWindows, curNoteType, i)) {
-                    curTempNote.length = (noteLen - 1) * measurementWindowMs;
+                    curTempNote.lengthMs = (noteLen - 1) * measurementWindowMs;
                     if (curTempNoteLongEnough(noteLen - 1)) {
                         if (curTempNote.degree == curNote.degree && curTempNote.type == curNote.type) {
                             concatNotes(curNote, curTempNote);
@@ -83,7 +82,7 @@ public class NoteAndDeviationIdentifier {
                         curTempNote.addDeviation(calcDeviation(inputWindows[i],
                                 curTempNote.degree), freqIsBorderline(inputWindows[i], curTempNote.degree));
                     }
-                    curTempNote.length = noteLen * measurementWindowMs;
+                    curTempNote.lengthMs = noteLen * measurementWindowMs;
                     if (curTempNoteLongEnough(noteLen)) {
                         if (curTempNote.degree == curNote.degree && curTempNote.type == curNote.type) {
                             concatNotes(curNote, curTempNote);
@@ -109,7 +108,7 @@ public class NoteAndDeviationIdentifier {
                     }
                 }
                 else {
-                    curTempNote.length = noteLen * measurementWindowMs;
+                    curTempNote.lengthMs = noteLen * measurementWindowMs;
                     if(curTempNote.type == Note.NoteType.VALIDNOTE || curTempNote.type == Note.NoteType.BORDERLINE) {
                         curTempNote.addDeviation(calcDeviation(inputWindows[i],
                                 curTempNote.degree), freqIsBorderline(inputWindows[i], curTempNote.degree));
@@ -127,7 +126,7 @@ public class NoteAndDeviationIdentifier {
                     curTempNote = initializeNote(curNoteType, inputWindows[0]);
                     if (lastPartialNote != null) {
                         if(lastPartialNote.type == curTempNote.type && lastPartialNote.degree == curTempNote.degree) {
-                            noteLen += lastPartialNote.length / measurementWindowMs;
+                            noteLen += lastPartialNote.lengthMs / measurementWindowMs;
                             concatNotes(lastPartialNote, curTempNote);
                             curTempNote = new Note(lastPartialNote);
                         }
@@ -149,7 +148,7 @@ public class NoteAndDeviationIdentifier {
             ret.addDeviation(calcDeviation(freq,
                     ret.degree), freqIsBorderline(freq, ret.degree));
         }
-        ret.length = measurementWindowMs;
+        ret.lengthMs = measurementWindowMs;
         return ret;
     }
 
@@ -158,9 +157,9 @@ public class NoteAndDeviationIdentifier {
     }
 
     private void concatNotes(Note note1, Note note2) {
-        note1.length += note2.length;
+        note1.lengthMs += note2.lengthMs;
         if(note2.type == Note.NoteType.VALIDNOTE || note2.type == Note.NoteType.BORDERLINE) {
-            for (int j = 0; j < note2.length / measurementWindowMs; ++j) {
+            for (int j = 0; j < note2.lengthMs / measurementWindowMs; ++j) {
                 note1.addDeviation(note2.getDeviation(j), note2.type == Note.NoteType.BORDERLINE);
             }
         }
@@ -219,6 +218,8 @@ public class NoteAndDeviationIdentifier {
     }
 
     private int nearestDegreeToTheFreq(double freq) {
+        if(freqsOfDegrees == null)
+            return 0;
         int index = 0;
         for(int i = 0; i < 2 * 12 * octaveSpan; ++i) {
             if(freqsOfDegrees[i] >= freq) {

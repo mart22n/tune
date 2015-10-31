@@ -1,6 +1,5 @@
 package com.tune.businesslogic;
 
-import java.io.Serializable;
 import java.util.Observable;
 
 /**
@@ -13,10 +12,13 @@ public class FrequencyExtractor extends Observable {
     private double loudnessThreshold = 30;
     private int nofConsecutiveUpwardsCrossingsToMeasure = 4;
     private double measurementWindowMs = 100;
+    private int samplesLength;
+    private int gapBetweenSamplesWhenDetectingPause;
 
     private double[] prevInputsLastWindowSamples;
     private int nofSamplesInWindow;
     int nofSamplesInPrevInputsLastWindow;
+
 
 
     // maxDifferenceOfOneZeroCrossingIntervalFromAverageCrossingIntervalInPercent
@@ -28,9 +30,8 @@ public class FrequencyExtractor extends Observable {
         ERROR
     };
 
-    @SuppressWarnings("serial") //with this annotation we are going to hide compiler warning
-    public static class FrequencyExtractorSettings extends Observable implements Serializable {
-        public int sampleRate, loudnessThreshold;
+    public static class FrequencyExtractorSettings extends Observable {
+        public int loudnessThreshold, gapBetweenSamplesWhenDetectingPause, sampleRate;
         public int nofConsecutiveUpwardsCrossingsToMeasure;
         public double measurementWindowMs, maxDiffInPercent;
 
@@ -55,6 +56,7 @@ public class FrequencyExtractor extends Observable {
         this.nofConsecutiveUpwardsCrossingsToMeasure = settings.nofConsecutiveUpwardsCrossingsToMeasure;
         this.measurementWindowMs = settings.measurementWindowMs;
         this.maxDiffInPercent = settings.maxDiffInPercent;
+        this.gapBetweenSamplesWhenDetectingPause = settings.gapBetweenSamplesWhenDetectingPause;
 
         nofSamplesInWindow = (int)(measurementWindowMs * (double)sampleRate / 1000.0);
         prevInputsLastWindowSamples = new double[nofSamplesInWindow];
@@ -71,15 +73,16 @@ public class FrequencyExtractor extends Observable {
              *                                     measuring loudness
              * @return
              */
-    public double[] extractFrequencies(double[] samples, double[] samplesBeforeAutoCorrelation) {
+    public double[] extractFrequencies(double[] samples, double[] samplesBeforeAutoCorrelation, int len) {
         int windowIndex = 0;
-        if(samples.length < nofSamplesInWindow) {
+        samplesLength = len;
+        if(samplesLength < nofSamplesInWindow) {
             readingType = ReadingType.ONLY_SINGLE_PARTIAL_WINDOW_IN_INPUT;
             return new double[] {-1};
         }
 
         // samples which are left over from last window are discarded from ret
-        double[] ret = new double[samples.length / nofSamplesInWindow];
+        double[] ret = new double[samplesLength / nofSamplesInWindow];
         int offsetInSamples = 0;
 
         if(nofSamplesInPrevInputsLastWindow > 0) {
@@ -104,7 +107,7 @@ public class FrequencyExtractor extends Observable {
     }
 
     private boolean finalWindowIsFullLengthInCurrentInput(double[] samples, int offsetInSamples) {
-        return (samples.length - offsetInSamples) % nofSamplesInWindow == 0;
+        return (samplesLength - offsetInSamples) % nofSamplesInWindow == 0;
     }
 
     private void findFreqForEachWindow(double[] samples, double[] samplesBeforeAutocorrelation, double[] ret, int windowIndex, int offsetOfFirstWindowInSamples) {
@@ -116,6 +119,12 @@ public class FrequencyExtractor extends Observable {
                 break;
             }
             else {
+                if(windowIndex == ret.length) {
+                    double[] tmp = new double[ret.length];
+                    System.arraycopy(ret, 0, tmp, 0, ret.length);
+                    ret = new double[tmp.length + 1];
+                    System.arraycopy(tmp, 0, ret, 0, tmp.length);
+                }
                 if (isPause(samplesBeforeAutocorrelation, offsetOfWindowInSamples) == true)
                     ret[windowIndex++] = 0;
                 else
@@ -148,9 +157,13 @@ public class FrequencyExtractor extends Observable {
         crossingsWithEqualIntervalsFound = findCrossingsWithEqualIntervals(samples, offsetInSamples,
                 indexesOfCrossings);
 
-        if(crossingsWithEqualIntervalsFound == true)
-            ret = (double)sampleRate * (double)(nofConsecutiveUpwardsCrossingsToMeasure - 1) /
+        if(crossingsWithEqualIntervalsFound == true) {
+            ret = (double) sampleRate * (double) (nofConsecutiveUpwardsCrossingsToMeasure - 1) /
                     (double) (indexesOfCrossings[nofConsecutiveUpwardsCrossingsToMeasure - 1] - indexesOfCrossings[0]);
+            if (ret > 1200) { // max 1200 hz
+                ret = -1;
+            }
+        }
         else {
             ret = -1;
         }
@@ -216,9 +229,9 @@ public class FrequencyExtractor extends Observable {
 
     public boolean isPause(double[] samples, int offset) {
         double loudness = 0.0;
-        for(int i=offset; i<offset + nofSamplesInWindow; ++i)
+        for(int i=offset; i< Math.min(offset + nofSamplesInWindow, samplesLength); i += gapBetweenSamplesWhenDetectingPause)
             loudness+=Math.abs(samples[i]);
-        loudness/=nofSamplesInWindow;
+        loudness/=nofSamplesInWindow / gapBetweenSamplesWhenDetectingPause;
         return loudness < loudnessThreshold;
     }
 }

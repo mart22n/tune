@@ -8,7 +8,6 @@ import android.util.Pair;
 
 import com.tune.businesslogic.AudioRecordListener;
 
-import java.io.EOFException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -25,15 +24,14 @@ AudioRecord.OnRecordPositionUpdateListener {
     private int channelConf;
     private int audioFmt;
     private int sampleRt;
-    private int sampleLen = 7200;
     private short[] audioSamples;
     private double[] pressureValues;
     private String tag;
     private Lock lock;
     private static final int AUDIO_SAMPLING_RATE = 44100;
     private static final int maxSampleSize = 44100; // Length of sample to analyze.
-    private double curNotifyRate = 0.4;
-    private static final double minNotifyRate = 0.4; // at least every 0.4 s.
+    private static final int notificationPeriod = 400;
+    private static final int sampleLen = AUDIO_SAMPLING_RATE * notificationPeriod / 1000;
 
 
     AudioRecordListenerImpl(Context c) {
@@ -44,15 +42,13 @@ AudioRecord.OnRecordPositionUpdateListener {
     }
 
     @Override
-    public void setAudioRecordOptions(int channelConfig, int audioFormat, int sampleRate,
-                                      int positionNotificationPeriodMs) {
+    public void setAudioRecordOptions(int channelConfig, int audioFormat) {
         channelConf = channelConfig;
         audioFmt = audioFormat;
-        sampleRt = sampleRate;
-        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channelConfig,
+        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, AUDIO_SAMPLING_RATE, channelConfig,
                 audioFormat, getMinBufferSize());
         audioRecord.setRecordPositionUpdateListener(this);
-        setPositionNotificationPeriod(positionNotificationPeriodMs);
+        setPositionNotificationPeriod(notificationPeriod);
         if(audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
             Log.e(tag, "Could not initialize microphone.");
         }
@@ -150,7 +146,7 @@ AudioRecord.OnRecordPositionUpdateListener {
      * will be polled for new data.
      **/
     private int getMinBufferSize() {
-        int bufSize = AudioRecord.getMinBufferSize(sampleRt,
+        int bufSize = AudioRecord.getMinBufferSize(AUDIO_SAMPLING_RATE,
                 channelConf,
                 audioFmt)
                 * 2;

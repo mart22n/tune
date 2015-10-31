@@ -17,11 +17,9 @@ public abstract class AudioRecordListener extends Observable {
      *
      * @param channelConfig - currently is working CHANNEL_IN_FRONT
      * @param audioFormat - currently ENCODING_PCM_16BIT is working
-     * @param positionNotificationPeriodMs - max period between notifications of new available audio samples.
      * It is possible for notifications to be lost if the period is too small.
      */
-    public abstract void setAudioRecordOptions(int channelConfig, int audioFormat, int sampleRate,
-                                      int positionNotificationPeriodMs);
+    public abstract void setAudioRecordOptions(int channelConfig, int audioFormat);
 
     public abstract void start();
 
