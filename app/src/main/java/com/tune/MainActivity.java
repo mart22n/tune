@@ -56,6 +56,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
         gauge = (SpeedometerGauge)findViewById(R.id.speedometer);
         lineChart = (LineChart)findViewById(R.id.chart);
@@ -77,7 +78,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         }
         businessLogicAdapter = new BusinessLogicAdapter(audioRecordListener, this);
         businessLogicAdapter.addObserver(this);
-        chartController = new ChartController(1, 100, lineChart, getWindowManager());
+        chartController = new ChartController(1, 100, lineChart, this);
         chartController.initChart(this.getResources().getConfiguration().orientation);
         stopStartButton = (ImageButton) findViewById(R.id.startStopButton);
         stopStartButton.setImageResource(R.drawable.stop);
@@ -235,6 +236,11 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
 
     @Override
     public void onNewNotesOrPausesAvailable(final Note[] notes) {
+        try
+        {
+            Thread.sleep(400);
+        }
+        catch (InterruptedException ex) {}
         runOnUiThread(new Runnable() {
             @Override
             public void run() {

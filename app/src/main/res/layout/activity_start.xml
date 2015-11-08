@@ -10,13 +10,13 @@
         android:textColor="#FFFFFFFF"
         android:textSize="@dimen/abc_text_size_headline_material"
         android:background="#00000000"/>
-    <TextView android:id="@+id/filler"
+   <!-- <TextView android:id="@+id/filler"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="\n\n\n\n\n\n\n"
+        android:text=""
         android:textColor="#FFFFFFFF"
         android:textSize="@dimen/abc_text_size_headline_material"
-        android:background="#00000000"/>
+        android:background="#00000000"/>-->
     <ImageButton android:id="@+id/mikebutton"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"

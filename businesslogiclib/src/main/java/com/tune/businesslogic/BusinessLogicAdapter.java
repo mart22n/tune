@@ -6,6 +6,7 @@ import android.util.Pair;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
@@ -51,9 +52,9 @@ public class BusinessLogicAdapter extends Observable implements Observer  {
             int size = ((Pair<double[], Integer>)(data)).second;
             double[] origSamples = new double[size];
             System.arraycopy(samples, 0, origSamples, 0, size);
-            //harmonicsRemover.removeHarmonics(samples, size); //TODO: uncomment
-            //writeSamplesToFile(samples, size);
-            double[] samplesTrimmed = new double[size];
+            /*harmonicsRemover.removeHarmonics(samples, size); //TODO: uncomment
+            writeSamplesToFile(samples, size);*/
+/*            double[] samplesTrimmed = new double[size];
             System.arraycopy(samples, 0, samplesTrimmed, 0, size);
 
             double[] freqs = frequencyExtractor.extractFrequencies(samplesTrimmed, origSamples, size);
@@ -62,10 +63,10 @@ public class BusinessLogicAdapter extends Observable implements Observer  {
                 Log.d(tag, String.valueOf(freqs[i]));
             }
             Note[] notes = noteAndDeviationIdentifier.convertWaveformToNotes(freqs);
+            blaListener.onNewNotesOrPausesAvailable(notes);*/
+            Note[] notes = new Note[5];
             blaListener.onNewNotesOrPausesAvailable(notes);
             Log.d(tag, "Notes.size = " + notes.length);
-            // control goes to FE -> SPF->VD->NE->DF->NI
-            //blaListener.onFirstNoteDetected(new Note());
         }
     }
 
@@ -73,6 +74,9 @@ public class BusinessLogicAdapter extends Observable implements Observer  {
         FileOutputStream fileOutputStream = null;
         try {
             File file = new File("/storage/emulated/0/Android/data/com.tune/files", "audiosamples.txt");
+            if(!file.exists()) {
+                file.createNewFile();
+            }
             fileOutputStream = new FileOutputStream(file, true);
         }
         catch (IOException ex) {

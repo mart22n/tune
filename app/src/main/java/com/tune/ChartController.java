@@ -10,6 +10,7 @@ import android.os.Build;
 import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.XAxis;
@@ -32,27 +33,121 @@ public class ChartController {
     private int minNoteLenMs = 100;
     private int mWidthPixels;
     private LineChart lineChart;
-    private WindowManager windowManager;
+    private MainActivity mainActivity;
     private int chartWidthCm;
-    private ArrayList<ArrayList<Integer>> addableNotes = new ArrayList<>();
+    private int orientation;
+    private ArrayList<ArrayList<Double>> addableNotes = new ArrayList<>();
     private int noteIndex = 0;
+    private ArrayList<String> noteNames = new ArrayList<>();
+    private int noteNameIndex = 0;
+    private int curXIndex = 0;
+    private int sleepTimer = 0;
+    private int maxViewPortSize = 10;
 
-    public ChartController(int rollingSpeedCmPerSecond, int minNoteLenMs, LineChart lineChart, WindowManager windowManager) {
+    public ChartController(int rollingSpeedCmPerSecond, int minNoteLenMs, LineChart lineChart, MainActivity mainActivity) {
         this.rollingSpeedCmPerSecond = rollingSpeedCmPerSecond;
         this.minNoteLenMs = minNoteLenMs;
         this.lineChart = lineChart;
-        this.windowManager = windowManager;
-        for(int i = 0; i < 1000; i += 1) {
-            ArrayList<Integer> note = new ArrayList<>();
-            note.add(i % 3 > 0 ? 15 : -15);
-            note.add(i % 3 > 0 ? 25 : -25);
-            note.add(i % 3 > 0 ? 5 : -5);
+        this.mainActivity = mainActivity;
+        noteNames.add("1");
+        noteNames.add("3");
+        noteNames.add("9");
+        noteNames.add("6");
+        noteNames.add("11");
+        noteNames.add("-3");
+        noteNames.add("4");
+        noteNames.add("");
+        noteNames.add("5");
+        noteNames.add("5");
+        createNotes();
+       /* for(int i = 0; i < 1000; i += 1) {
+            ArrayList<Double> note = new ArrayList<>();
+            int randCnt = (int)(Math.random() * 10);
+            int sign = (Math.random() < 0.5 ? -1 : 1);
+            for(int j = 0; j < 6; ++j) {
+                note.add(sign * Math.random() / 2.2);
+            }
             addableNotes.add(note);
-        }
+        }*/
+    }
+
+    private void createNotes() {
+        ArrayList<Double> note = new ArrayList<>();
+        note.add(0.1);
+        note.add(0.15);
+        note.add(0.05);
+        note.add(0.1);
+        addableNotes.add(note);
+
+        note = new ArrayList<>();
+        note.add(0.1);
+        note.add(0.15);
+        addableNotes.add(note);
+
+        note = new ArrayList<>();
+        note.add(0.1);
+        note.add(0.15);
+        note.add(0.1);
+        note.add(0.25);
+        addableNotes.add(note);
+
+        note = new ArrayList<>();
+        note.add(0.1);
+        note.add(0.15);
+        note.add(0.21);
+        note.add(0.10);
+        addableNotes.add(note);
+
+        note = new ArrayList<>();
+        note.add(0.3);
+        note.add(0.25);
+        note.add(0.05);
+        note.add(0.07);
+        note.add(0.15);
+        note.add(0.25);
+        addableNotes.add(note);
+
+        note = new ArrayList<>();
+        note.add(0.1);
+        note.add(0.15);
+        note.add(0.05);
+        note.add(0.1);
+        addableNotes.add(note);
+
+        note = new ArrayList<>();
+        note.add(0.1);
+        note.add(0.25);
+        note.add(0.15);
+        note.add(0.1);
+        addableNotes.add(note);
+
+        note = new ArrayList<>();
+        note.add(0.0);
+        note.add(0.0);
+        note.add(0.0);
+        note.add(0.0);
+        addableNotes.add(note);
+
+        note = new ArrayList<>();
+        note.add(0.3);
+        note.add(0.45);
+        note.add(0.45);
+        note.add(0.35);
+        note.add(0.30);
+        note.add(0.28);
+        addableNotes.add(note);
+
+
+        note = new ArrayList<>();
+        note.add(-0.2);
+        note.add(-0.3);
+        note.add(-0.1);
+        note.add(-0.2);
+        addableNotes.add(note);
     }
 
     private void setRealDeviceSizeInPixels() {
-        Display display = windowManager.getDefaultDisplay();
+        Display display = mainActivity.getWindowManager().getDefaultDisplay();
         DisplayMetrics displayMetrics = new DisplayMetrics();
         display.getMetrics(displayMetrics);
 
@@ -82,15 +177,16 @@ public class ChartController {
     public void initChart(int orientation) {
         setRealDeviceSizeInPixels();
         DisplayMetrics dm = new DisplayMetrics();
-        windowManager.getDefaultDisplay().getMetrics(dm);
+        mainActivity.getWindowManager().getDefaultDisplay().getMetrics(dm);
         chartWidthCm = (int)(mWidthPixels/dm.xdpi * 2.54);
 
-        lineChart.setBackgroundColor(Color.BLACK);
+        lineChart.setGridBackgroundColor(Color.BLACK);
         lineChart.setTouchEnabled(true);
         lineChart.setDragEnabled(true);
         lineChart.setScaleXEnabled(true);
         lineChart.setScaleYEnabled(false);
         lineChart.setDragDecelerationFrictionCoef(0.85f);
+        this.orientation = orientation;
         if(orientation == Configuration.ORIENTATION_PORTRAIT)
             lineChart.setMinimumHeight(475);
         else
@@ -104,15 +200,16 @@ public class ChartController {
         lineChart.getXAxis().setTextColor(Color.WHITE);
         // define where to add labels of x-axis
         lineChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
-        lineChart.getXAxis().setDrawGridLines(true);
+        lineChart.getXAxis().setDrawGridLines(false);
         lineChart.getXAxis().setGridColor(Color.WHITE);
+        lineChart.getXAxis().setTextSize(22);
 /*        LimitLine ll = new LimitLine(2f, "150");
     ll.setLineColor(Color.YELLOW);
     ll.setLineWidth(4f);
     lineChart.getXAxis().addLimitLine(ll);*/
 
-        lineChart.getAxisLeft().setAxisMaxValue(55);    // max deviation = +/-50 cents
-        lineChart.getAxisLeft().setAxisMinValue(-55);
+        lineChart.getAxisLeft().setAxisMaxValue(0.55f);    // max deviation = +/-50 cents
+        lineChart.getAxisLeft().setAxisMinValue(-0.55f);
         lineChart.getAxisLeft().setStartAtZero(false);
 
         lineChart.getAxisLeft().setEnabled(true);
@@ -128,7 +225,7 @@ public class ChartController {
         ArrayList<LineDataSet> dataSets = new ArrayList<>();
         LineDataSet dsNote1 = new LineDataSet(new ArrayList<Entry>(), "");
 
-        for(int i = 0; i < 18; ++i) {
+        for(int i = 0; i < maxViewPortSize; ++i) {
             Entry e = new Entry(0, i);
             dsNote1.addEntry(e);
             xVals.add("");
@@ -151,74 +248,82 @@ public class ChartController {
         lds.setDrawCircles(false);
         lds.setDrawValues(false);
         lds.setLineWidth(0.2f);
-        lds.setValueTextSize(16f);
-        lds.setValueTypeface(Typeface.create((String)null, Typeface.BOLD));
+        lds.setValueTextSize(22f);
+        lds.setValueTypeface(Typeface.create((String) null, Typeface.BOLD));
     }
 
     void drawNotes(Note[] notes) {
         LineData lineData = lineChart.getData();
-
-        List<LineDataSet> existingNotes = lineData.getDataSets();
-
-        ArrayList<Entry> displayedDeviations = new ArrayList<>();
-        if(noteIndex < 1000) {
-            for (int j = 0; j < 3; ++j) {
-                Entry e = new Entry(addableNotes.get(noteIndex).get(j), noteIndex * 3 + 18 + j);
-                displayedDeviations.add(e);
-                if(j == 1)
-                    lineData.getXVals().add(Integer.toString(noteIndex));
-                else
-                    lineData.getXVals().add("");
+        if(noteIndex == addableNotes.size())
+            return;
+        if (sleepTimer < addableNotes.get(noteIndex).size()) {
+            ++sleepTimer;
+            try {
+                Thread.sleep(400);
+            } catch (InterruptedException ex) {
             }
+        } else {
+            sleepTimer = 0;
 
-            ++noteIndex;
 
-            LineDataSet lds = new LineDataSet(displayedDeviations, "");
-            formatDataSet(lds);
-            existingNotes.add(lds);
-        }
-        /*LineData lineData = lineChart.getData();
-        List<LineDataSet> existingNotes = lineData.getDataSets();
-        ArrayList<Entry> displayedDeviations = new ArrayList<>();
-        for (int i = 0; i < notes.length; ++i) {
-            // shift current notes to the left by the width of new note
-            for(int j = 0; j < existingNotes.size(); ++j) {
-                for (int l = 0; l < existingNotes.get(j).getYVals().size(); ++l) {
-                    for (int k = 0; k < notes[i].deviations.size(); ++k) {
-                        Entry e = existingNotes.get(j).getYVals().get(l);
-                        if (e == null) continue;
+            List<LineDataSet> existingNotes = lineData.getDataSets();
 
-                        e.setXIndex(e.getXIndex() - 1);
+            ArrayList<Entry> displayedDeviations = new ArrayList<>();
+            if (noteIndex < addableNotes.size()) {
+                switch(noteIndex) {
+                    case 0:
+                    case 1:
+                        Toast.makeText(mainActivity.getApplicationContext(), "Esimene valge kujund näitab, et noot on umbes 0,1 pooltooni kõrgem kui helistiku korrektne noot", Toast.LENGTH_LONG).show();
+                    break;
+                    case 2:
+                    case 3:
+                        Toast.makeText(mainActivity.getApplicationContext(), "Järgmised noodid on samuti veidi kõrgemad, kui peaks. Laineline osa näitab kõrvalekalde muutumist noodi jooksul, kujundi laius noodi pikkust", Toast.LENGTH_LONG).show();
+                        break;
+                    case 5:
+                    case 6:
+                        Toast.makeText(mainActivity.getApplicationContext(), "Noodi all olev number näitab, mitu pooltooni ta on kõrgem või madalam esimesena laudud noodist", Toast.LENGTH_LONG).show();
+                        break;
+                    case 7:
+                        Toast.makeText(mainActivity.getApplicationContext(), "Pikemad vahed näitavad pause", Toast.LENGTH_LONG).show();
+                        break;
+                    case 8:
+                    case 9:
+                        Toast.makeText(mainActivity.getApplicationContext(), "Punane kujund on hoiatus: kõrvalekalle on suurem kasutaja seadistatud maksimumist. Antakse helisignaal", Toast.LENGTH_LONG).show();
+                    break;
+                }
+                for (int j = 0; j < addableNotes.get(noteIndex).size(); ++j) {
+                    Entry e = new Entry((addableNotes.get(noteIndex).get(j)).floatValue(), curXIndex + maxViewPortSize + j);
+                    displayedDeviations.add(e);
+                    if (j == (int)(addableNotes.get(noteIndex).size() / 2)) {
+                        lineData.getXVals().add(noteNames.get(noteNameIndex++));
+                    }
+                    else {
+                        lineData.getXVals().add("");
                     }
                 }
+
+
+                LineDataSet lds = new LineDataSet(displayedDeviations, "");
+                formatDataSet(lds);
+                if(noteIndex == 8) {
+                    lds.setFillColor(Color.RED);
+                }
+                existingNotes.add(lds);
+                curXIndex += addableNotes.get(noteIndex).size();
+                ++noteIndex;
             }
 
-           *//* // place the new note
-            displayedDeviations = new ArrayList<>();
-            for(int j = 0; j < notes[0].deviations.size(); ++j) {
-                Entry e = new Entry(notes[0].deviations.get(j), j);
-                displayedDeviations.add(e);
-            }
-*//*
-        }*/
+            lineChart.setVisibleXRange(0, maxViewPortSize);
 
-        /*LineDataSet lds = new LineDataSet(displayedDeviations, "");
-        formatDataSet(lds);
-        existingNotes.add(lds);*/
-       /* for (int i = 0; i < 1; ++i) {
-            int startIndex = existingNotes.get(0).getEntryCount() - existingNotes.get(1).getYVals().size();
-            for (int j = startIndex; j < startIndex + existingNotes.get(1).getEntryCount(); ++j) {
-                existingNotes.get(1).getEntryForXIndex(j).setVal(notes[i].deviations.get(j - startIndex));
-            }
-        }
+            lineChart.centerViewTo(lineData.getXValCount() - maxViewPortSize / 2, 0, YAxis.AxisDependency.RIGHT);
+
+            lineChart.notifyDataSetChanged();
+            lineChart.invalidate();
+/*
+            if (noteIndex < 4 && orientation == Configuration.ORIENTATION_PORTRAIT)
+        Toast.makeText(mainActivity.getApplicationContext(), "Each white column shows, how much in semitones, each note has deviated from the correct pitch.", Toast.LENGTH_LONG).show();
 */
-        //lineChart.setScaleMinima(existingNotes.size() / 6, 1);
-        lineChart.setVisibleXRange(18, 18);
-
-        lineChart.centerViewTo(lineData.getXValCount() - 9, 0, YAxis.AxisDependency.RIGHT);
-
-        lineChart.notifyDataSetChanged();
-        lineChart.invalidate();
+    }
     }
 }
 

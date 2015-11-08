@@ -17,6 +17,7 @@ public class StartActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         hideTab();
         tag = getApplicationContext().getString(R.string.tag);
         setContentView(R.layout.activity_start);
