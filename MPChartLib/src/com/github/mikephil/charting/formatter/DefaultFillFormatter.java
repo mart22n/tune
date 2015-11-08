@@ -43,7 +43,7 @@ public class DefaultFillFormatter implements FillFormatter {
                 fillMin = 0f;
             }
         }
-
+        fillMin = 0f;
         return fillMin;
     }
 }

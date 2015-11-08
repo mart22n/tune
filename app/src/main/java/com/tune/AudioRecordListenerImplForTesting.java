@@ -62,8 +62,8 @@ public class AudioRecordListenerImplForTesting extends AudioRecordListener {
                     int shortsRead = 0;
                     double[] buf = new double[1];
                     try {
-                        buf = readAudioFile();
-                        Thread.sleep(400);
+                     /*   buf = readAudioFile();
+                        Thread.sleep(400);*/
                         setChanged();
                         notifyObservers(new Pair<>(buf, buf.length));
                     }
@@ -93,7 +93,7 @@ public class AudioRecordListenerImplForTesting extends AudioRecordListener {
     }
 
     private double[] readAudioFile() {
-        double[] result = new double[100000];
+        double[] result = new double[1000000];
         try {
             //File file = new File(getClass().getResource("/audiosamples.txt").getFile());
             //Assert.assertEquals(true, file.exists());
