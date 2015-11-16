@@ -5,9 +5,15 @@ import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.util.Log;
 import android.util.Pair;
+import android.widget.Toast;
 
+import com.github.mikephil.charting.data.LineData;
 import com.tune.businesslogic.AudioRecordListener;
 
+import java.nio.Buffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -20,7 +26,7 @@ AudioRecord.OnRecordPositionUpdateListener {
     boolean shouldAudioReaderThreadDie;
     private Thread audioReaderThread;
     private AudioRecord audioRecord;
-    private CircularBuffer circularBuffer;
+    private ArrayCircularBuffer<Double> circularBuffer;
     private int channelConf;
     private int audioFmt;
     private int sampleRt;
@@ -28,17 +34,21 @@ AudioRecord.OnRecordPositionUpdateListener {
     private double[] pressureValues;
     private String tag;
     private Lock lock;
+    private MainActivity mainActivity;
+    private int droppedSampleCount;
     private static final int AUDIO_SAMPLING_RATE = 44100;
-    private static final int maxSampleSize = 44100; // Length of sample to analyze.
     private static final int notificationPeriod = 400;
     private static final int sampleLen = AUDIO_SAMPLING_RATE * notificationPeriod / 1000;
+    private static final int circularBufSize = sampleLen * 2;
+    private long audioReaderThreadCallingInterval = 0;
 
 
-    AudioRecordListenerImpl(Context c) {
-        tag = c.getResources().getString(R.string.tag);
-        circularBuffer = new CircularBuffer(sampleLen);
+    AudioRecordListenerImpl(MainActivity mainActivity) {
+        tag = "tune";// c.getResources().getString(R.string.tag);//TODO: change
+        circularBuffer = new ArrayCircularBuffer(circularBufSize);//TODO: is *3 necessary?//sampleLen);
         pressureValues = new double[4 * sampleLen + 100];
         lock = new ReentrantLock();
+        this.mainActivity = mainActivity;
     }
 
     @Override
@@ -75,20 +85,25 @@ AudioRecord.OnRecordPositionUpdateListener {
      */
     @Override
     public void onPeriodicNotification(AudioRecord recorder) {
+        long diff = (System.nanoTime() - audioReaderThreadCallingInterval) / 1000000;
+        audioReaderThreadCallingInterval = System.nanoTime();
+        Log.d(tag, String.valueOf(diff) + " t");
         new Thread(new Runnable() {
             @Override
             public void run() {
-            if(!lock.tryLock()) {
-                //Log.e(tag, "Analyzing algorithm is too slow. Dropping sample"); //TODO: uncomment
-                return;
+            while(!lock.tryLock()) {
+                try {
+                    Thread.sleep(notificationPeriod / 4);
+                }
+                catch (InterruptedException e) {}
             }
-            int elementsRead =
-                    circularBuffer.getElements(pressureValues, 0, maxSampleSize);
-            if(elementsRead == maxSampleSize) {
-                Log.e(tag, "Too many samples read from circular buffer");
-            }
+            long timeStart = System.nanoTime();
+            List<Double> pressureValues = circularBuffer.removeAll();
             setChanged();
-            notifyObservers(new Pair<double[], Integer>(pressureValues, elementsRead));
+            notifyObservers(pressureValues);
+            long timeEnd = System.nanoTime();
+            long diff = (timeEnd - timeStart) / 1000000;
+            Log.d(tag, String.valueOf(diff));
 
             lock.unlock();
             }
@@ -115,9 +130,12 @@ AudioRecord.OnRecordPositionUpdateListener {
                     if(shortsRead < 0) {
                         Log.e(tag, "Could not read audio data.");
                     } else {
+
+                        List<Double> doubles = new ArrayList<>();
+
                         for(int i=0; i<shortsRead; ++i) {
-                            circularBuffer.push(audioSamples[i]);
-                        }
+                            doubles.add(((Short)audioSamples[i]).doubleValue()); }
+                        circularBuffer.insertArray(doubles);
                     }
                 }
                 Log.d(tag, "AudioReaderThread reached the end");

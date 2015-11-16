@@ -67,7 +67,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
 
         FESettings = new FrequencyExtractor.FrequencyExtractorSettings();
         createGauge();
-        audioRecordListener = new AudioRecordListenerImplForTesting(this.getApplicationContext());
+        audioRecordListener = new AudioRecordListenerImpl(this);
         try {
             audioRecordListener.setAudioRecordOptions(AudioRecordListener.CHANNEL_IN_FRONT,
                     AudioRecordListener.ENCODING_PCM_16BIT);
@@ -90,7 +90,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
                                                        if (listening == true) {
                                                            stopStartButton.setImageResource(R.drawable.mike_enabled);
                                                            listening = false;
-                                                           findViewById(R.id.action_settings).setEnabled(true);
+                                                           //findViewById(R.id.action_settings).setEnabled(true);//TODO: uncomment
                                                            businessLogicAdapter.stopListening();
                                                        } else {
                                                            stopStartButton.setImageResource(R.drawable.stop);
@@ -250,8 +250,13 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
     }
 
     @Override
-    public void onToastNotification(String notification) {
-        Toast.makeText(this, notification, Toast.LENGTH_LONG).show();
+    public void onToastNotification(final String notification) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, notification, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
  /*   @Override
@@ -267,4 +272,4 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
             Toast.makeText(this, "portrait", Toast.LENGTH_SHORT).show();
         }
     }*/
-}
+         }

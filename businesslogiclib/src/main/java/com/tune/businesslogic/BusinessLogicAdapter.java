@@ -48,25 +48,36 @@ public class BusinessLogicAdapter extends Observable implements Observer  {
             blaListener.onToastNotification(data.toString());
         }
         else {
-            double[] samples = ((Pair<double[], Integer>)(data)).first;
-            int size = ((Pair<double[], Integer>)(data)).second;
+
+            List<Double> samples = (List<Double>)data;
+            int size = samples.size();
             double[] origSamples = new double[size];
-            System.arraycopy(samples, 0, origSamples, 0, size);
-            /*harmonicsRemover.removeHarmonics(samples, size); //TODO: uncomment
-            writeSamplesToFile(samples, size);*/
-/*            double[] samplesTrimmed = new double[size];
+            double[] tmp = new double[size * 4 + 100];
+            //long timeStart = System.nanoTime();
+            for(int i = 0; i < samples.size(); ++i) {
+                tmp[i] = samples.get(i);
+            }
+            System.arraycopy(tmp, 0, origSamples, 0, size);
+            harmonicsRemover.removeHarmonics(tmp, size);
+            writeSamplesToFile(tmp, size);
+  /*          long timeEnd = System.nanoTime();
+            long diff = (timeEnd - timeStart) / 1000000;
+            Log.d(tag, String.valueOf(diff));*/
+            int i  = 5;
+            int a = i;
+           /* double[] samplesTrimmed = new double[size];
             System.arraycopy(samples, 0, samplesTrimmed, 0, size);
 
             double[] freqs = frequencyExtractor.extractFrequencies(samplesTrimmed, origSamples, size);
-            Log.d(tag, "freqs = ");
-            for(int i = 0; i < freqs.length; ++i) {
+            Log.d(tag, "freqs = ");*/
+            /*for(int i = 0; i < freqs.length; ++i) {
                 Log.d(tag, String.valueOf(freqs[i]));
             }
             Note[] notes = noteAndDeviationIdentifier.convertWaveformToNotes(freqs);
-            blaListener.onNewNotesOrPausesAvailable(notes);*/
+            blaListener.onNewNotesOrPausesAvailable(notes);
             Note[] notes = new Note[5];
             blaListener.onNewNotesOrPausesAvailable(notes);
-            Log.d(tag, "Notes.size = " + notes.length);
+            Log.d(tag, "Notes.size = " + notes.length);*/
         }
     }
 
@@ -83,19 +94,37 @@ public class BusinessLogicAdapter extends Observable implements Observer  {
             Log.e(tag, "writeSamplesToFile(): cannot create fileOutputStream");
         }
         try {
-            for (int i = 0; i < size; ++i) {
-                byte[] tmp = new byte[20];
-                double d = samples[i];
-                fileOutputStream.write(((Double) d).toString().getBytes(), 0, ((Double) d).toString().getBytes().length);
-                byte[] newLine = new byte[] { 0x0D, 0x0A };
-                fileOutputStream.write(newLine, 0, 2);
-            }
-            fileOutputStream.close();
+            //writeToFileAsHumanReadable(samples, size, fileOutputStream);
+            writeToFileAsBinary(samples, size, fileOutputStream);
+
         }
         catch(IOException io) {
             Log.e(tag, "writeSamplesToFile(): cannot write to fileOutputStream");
         }
 
+    }
+
+    private void writeToFileAsBinary(double[] samples, int size, FileOutputStream fileOutputStream) throws IOException {
+        java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+        java.io.DataOutputStream d = new java.io.DataOutputStream(b);
+        for(int i = 0; i < size; ++i) {
+            d.writeDouble(samples[i]);
+        }
+        d.flush();
+        fileOutputStream.write(b.toByteArray(), 0, b.size());
+        fileOutputStream.close();
+    }
+    private void writeToFileAsHumanReadable(double[] samples, int size, FileOutputStream fileOutputStream) throws IOException {
+        byte[] fileContents = new byte[size * 30];
+        int indexInFileContents = 0;
+        for (int i = 0; i < size; ++i) {//TODO: i+= 1
+            double d = samples[i];
+            byte[] tmp = ((Double) d).toString().concat("\\r\\n").getBytes();
+            System.arraycopy(tmp, 0, fileContents, indexInFileContents, tmp.length);
+            indexInFileContents += tmp.length;
+        }
+        fileOutputStream.write(fileContents, 0, indexInFileContents);
+        fileOutputStream.close();
     }
 
 

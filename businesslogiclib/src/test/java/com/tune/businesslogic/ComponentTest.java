@@ -7,6 +7,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExternalResource;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,10 +17,7 @@ import java.nio.charset.Charset;
 /**
  * Created by mart22n on 2.10.2015.
  */
-public class ComponentTest {
-
-    private FrequencyExtractor frequencyExtractor;
-    private NoteAndDeviationIdentifier noteAndDeviationIdentifier;
+public class ComponentTest extends TestBase {
 
     @Before
     public void setUp() {
@@ -145,29 +143,6 @@ public class ComponentTest {
         Assert.assertEquals(12, frequencyExtractor.nofSamplesInPrevInputsLastWindow);
     }
 
-    private void setFESettings(int sampleRate, int loudnessThreshold, int nofConsecutiveCrossingsToMeasure,
-                               double measurementWindowMs, double maxDiffInPercent,
-                               int gapBetweenSamplesWhenDetectingPause) {
-        FrequencyExtractor.FrequencyExtractorSettings s = new FrequencyExtractor.FrequencyExtractorSettings();
-        s.sampleRate = sampleRate;
-        s.loudnessThreshold = loudnessThreshold;
-        s.maxDiffInPercent = maxDiffInPercent;
-        s.measurementWindowMs = measurementWindowMs;
-        s.setNofConsecutiveUpwardsCrossingsToMeasure(nofConsecutiveCrossingsToMeasure);
-        s.gapBetweenSamplesWhenDetectingPause = gapBetweenSamplesWhenDetectingPause;
-        frequencyExtractor = new FrequencyExtractor(s);
-    }
-
-    private void setNISettings(int measurementWindowMs, int minNoteLenMs,
-                               int octaveSpan, int deviationWhereBorderlineStarts) {
-        NoteAndDeviationIdentifier.NoteIdentifierSettings s = new NoteAndDeviationIdentifier.NoteIdentifierSettings();
-        s.measurementWindowMs = measurementWindowMs;
-        s.minNoteLenMs = minNoteLenMs;
-        s.octaveSpan = octaveSpan;
-        s.deviationWhereBorderLineStarts = deviationWhereBorderlineStarts;
-        noteAndDeviationIdentifier = new NoteAndDeviationIdentifier(s);
-    }
-
     /**
      * ca 28000 samples, 3 notes
      */
@@ -184,19 +159,43 @@ public class ComponentTest {
     public ResourceFile res = new ResourceFile("audiosamples.txt");
 
     private double[] readAudioFile() {
-        double[] result = new double[10000000];
+        double[] result = new double[1];
         try {
             //File file = new File(getClass().getResource("/audiosamples.txt").getFile());
             //Assert.assertEquals(true, file.exists());
-            String contents = res.getContent();
-            Assert.assertEquals(true, contents.length() > 0);
-            String[] parts = contents.split("\r\n");
-            for(int i = 0; i < parts.length; ++i) {
-                result[i] = Double.parseDouble(parts[i]);
-            }
+            //result = readAudioFileAsHumanReadable();
+            result = readAudioFileAsBinary();
         }
         catch (IOException io) {
 
+        }
+        return result;
+    }
+
+    private double[] readAudioFileAsBinary() throws IOException {
+        byte[] contents = new byte[(int)res.getContent().length()];
+        assert(res.getInputStream().read(contents) == contents.length);
+        res.getInputStream().close();
+        java.io.ByteArrayInputStream ba = new java.io.ByteArrayInputStream(contents);
+        java.io.DataInputStream d = new java.io.DataInputStream(ba);
+        double num = 0;
+        double[] res = new double[contents.length / 8];
+        try {
+            for(int i = 0; i < contents.length; ++i) {
+                res[i] = d.readDouble();
+            }
+        }
+        catch (EOFException eof) { }
+        return res;
+    }
+
+    private double[] readAudioFileAsHumanReadable() throws IOException {
+        String contents = res.getContent();
+        Assert.assertEquals(true, contents.length() > 0);
+        String[] parts = contents.split("\r\n");
+        double[] result = new double[parts.length];
+        for(int i = 0; i < parts.length; ++i) {
+            result[i] = Double.parseDouble(parts[i]);
         }
         return result;
     }

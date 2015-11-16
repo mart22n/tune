@@ -8,9 +8,7 @@ import org.junit.Test;
 /**
  * Created by mart22n on 8.09.2015.
  */
-public class FrequencyExtractorTest {
-    private FrequencyExtractor frequencyExtractor;
-
+public class FrequencyExtractorUnitTest extends TestBase {
     @Before
     public void setUp() {
         int loudnessThreshold = 0;
@@ -323,16 +321,5 @@ public class FrequencyExtractorTest {
         Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
     }
 
-    private void setFESettings(int sampleRate, int loudnessThreshold, int nofConsecutiveCrossingsToMeasure,
-                               double measurementWindowMs, double maxDiffInPercent, int gapBetweenSamplesWhenDetectingPause) {
-        FrequencyExtractor.FrequencyExtractorSettings s = new FrequencyExtractor.FrequencyExtractorSettings();
-        s.sampleRate = sampleRate;
-        s.loudnessThreshold = loudnessThreshold;
-        s.maxDiffInPercent = maxDiffInPercent;
-        s.measurementWindowMs = measurementWindowMs;
-        s.setNofConsecutiveUpwardsCrossingsToMeasure(nofConsecutiveCrossingsToMeasure);
-        s.gapBetweenSamplesWhenDetectingPause = gapBetweenSamplesWhenDetectingPause;
-        frequencyExtractor = new FrequencyExtractor(s);
 
-    }
 }

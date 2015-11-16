@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.nio.charset.Charset;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -24,7 +25,7 @@ public class AudioRecordListenerImplForTesting extends AudioRecordListener {
     boolean shouldAudioReaderThreadDie;
     private Thread audioReaderThread;
     private AudioRecord audioRecord;
-    private CircularBuffer circularBuffer;
+    private ArrayCircularBuffer<Double> circularBuffer;
     private int channelConf;
     private int audioFmt;
     private int sampleRt;
@@ -40,7 +41,7 @@ public class AudioRecordListenerImplForTesting extends AudioRecordListener {
 
     AudioRecordListenerImplForTesting(Context c) {
         tag = c.getResources().getString(R.string.tag);
-        circularBuffer = new CircularBuffer(sampleLen);
+        circularBuffer = new ArrayCircularBuffer<Double>(sampleLen);
         pressureValues = new double[4 * sampleLen + 100];
         lock = new ReentrantLock();
     }
@@ -62,8 +63,8 @@ public class AudioRecordListenerImplForTesting extends AudioRecordListener {
                     int shortsRead = 0;
                     double[] buf = new double[1];
                     try {
-                     /*   buf = readAudioFile();
-                        Thread.sleep(400);*/
+                        buf = readAudioFile();
+                        Thread.sleep(400);
                         setChanged();
                         notifyObservers(new Pair<>(buf, buf.length));
                     }
