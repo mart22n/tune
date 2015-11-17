@@ -89,10 +89,10 @@ public class FrequencyExtractor extends Observable {
             double[] concatenatedWindow = new double[nofSamplesInWindow];
             double[] concatenatedWindowForpauses = new double[nofSamplesInWindow];
             offsetInSamples = nofSamplesInWindow - nofSamplesInPrevInputsLastWindow;
-            if(finalWindowIsFullLengthInCurrentInput(samples, offsetInSamples))
+            if(finalWindowIsFullLengthInCurrentInput(offsetInSamples))
                 ret = new double[ret.length + 1];
-            copySamplesFromPrevInputAndFirstSamplesInCurrentInputIntoConcatenatedWindow(samples, nofSamplesInWindow, concatenatedWindow);
-            copySamplesFromPrevInputAndFirstSamplesInCurrentInputIntoConcatenatedWindow(samplesBeforeAutoCorrelation, nofSamplesInWindow, concatenatedWindowForpauses);
+            concatSamplesFromPrevInputIntoFirstWindowOfCurSamples(samples, nofSamplesInWindow, concatenatedWindow);
+            concatSamplesFromPrevInputIntoFirstWindowOfCurSamples(samplesBeforeAutoCorrelation, nofSamplesInWindow, concatenatedWindowForpauses);
             if(isPause(concatenatedWindowForpauses, 0) == true) {
                 ret[windowIndex++] = 0;
             }
@@ -106,13 +106,13 @@ public class FrequencyExtractor extends Observable {
         return ret;
     }
 
-    private boolean finalWindowIsFullLengthInCurrentInput(double[] samples, int offsetInSamples) {
+    private boolean finalWindowIsFullLengthInCurrentInput(int offsetInSamples) {
         return (samplesLength - offsetInSamples) % nofSamplesInWindow == 0;
     }
 
     private void findFreqForEachWindow(double[] samples, double[] samplesBeforeAutocorrelation, double[] ret, int windowIndex, int offsetOfFirstWindowInSamples) {
         for(int offsetOfWindowInSamples = offsetOfFirstWindowInSamples; offsetOfWindowInSamples <
-                samples.length; offsetOfWindowInSamples += nofSamplesInWindow) {
+                samplesLength; offsetOfWindowInSamples += nofSamplesInWindow) {
 
             if(inputsLastWindowIsPartial(samples, offsetOfWindowInSamples)) {
                 storeLastPartialWindow(samples, offsetOfWindowInSamples);
@@ -134,17 +134,17 @@ public class FrequencyExtractor extends Observable {
     }
 
     private boolean inputsLastWindowIsPartial(double[] samples, int offsetOfWindowInSamples) {
-        return samples.length < offsetOfWindowInSamples + nofSamplesInWindow;
+        return samplesLength < offsetOfWindowInSamples + nofSamplesInWindow;
     }
 
-    private void copySamplesFromPrevInputAndFirstSamplesInCurrentInputIntoConcatenatedWindow(double[] samples, int nofSamplesInWindow, double[] firstWindow) {
+    private void concatSamplesFromPrevInputIntoFirstWindowOfCurSamples(double[] samples, int nofSamplesInWindow, double[] firstWindow) {
         System.arraycopy(prevInputsLastWindowSamples, 0, firstWindow, 0, nofSamplesInPrevInputsLastWindow);
         System.arraycopy(samples, 0, firstWindow, nofSamplesInPrevInputsLastWindow,
                 nofSamplesInWindow - nofSamplesInPrevInputsLastWindow);
     }
 
     private void storeLastPartialWindow(double[] samples, int offsetInInput) {
-        nofSamplesInPrevInputsLastWindow = samples.length - offsetInInput;
+        nofSamplesInPrevInputsLastWindow = samplesLength - offsetInInput;
             System.arraycopy(samples, offsetInInput, prevInputsLastWindowSamples, 0,
                     nofSamplesInPrevInputsLastWindow);
     }

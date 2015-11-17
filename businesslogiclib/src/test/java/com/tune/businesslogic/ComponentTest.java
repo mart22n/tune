@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Created by mart22n on 2.10.2015.
@@ -151,12 +153,21 @@ public class ComponentTest extends TestBase {
         setFESettings(44100, 0, 4, 30, 1, 100);
         setNISettings(30, 100, 2, 45);
         double[] samples = readAudioFile();
-        double[] windows = frequencyExtractor.extractFrequencies(samples, samples, samples.length);
+        double[] begin = new double[samples.length / 2];
+        System.arraycopy(samples, 0, begin, 0, samples.length / 2);
+
+        double[] end = new double[samples.length / 2];
+        System.arraycopy(samples, samples.length / 2, end, 0, samples.length / 2);
+
+        double[] windows = frequencyExtractor.extractFrequencies(begin, begin, samples.length / 2);
         Note[] notes = noteAndDeviationIdentifier.convertWaveformToNotes(windows);
+
+        windows = frequencyExtractor.extractFrequencies(end, end, samples.length / 2);
+        notes = noteAndDeviationIdentifier.convertWaveformToNotes(windows);
     }
 
     @Rule
-    public ResourceFile res = new ResourceFile("audiosamples.txt");
+    public ResourceFile res = new ResourceFile("audiosamples_10secof300hz.txt");
 
     private double[] readAudioFile() {
         double[] result = new double[1];

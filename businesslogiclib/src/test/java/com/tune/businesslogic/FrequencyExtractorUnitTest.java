@@ -51,7 +51,7 @@ public class FrequencyExtractorUnitTest extends TestBase {
     }
 
     @Test
-    public void ifTooQuiet_zeroFreqIsReturned() {
+    public void ifPause_zeroFreqIsReturned() {
         double[] samples = {
                 0, 1, 2, 1, 1, -1, -2, -1,
                 -1, 1, 2, 1, 1, -1, -2, -1,

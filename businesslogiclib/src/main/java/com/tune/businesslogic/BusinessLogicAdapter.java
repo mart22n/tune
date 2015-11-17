@@ -25,9 +25,9 @@ public class BusinessLogicAdapter extends Observable implements Observer  {
         audioRecordListener.addObserver(this);
         FrequencyExtractor.FrequencyExtractorSettings s = new FrequencyExtractor.FrequencyExtractorSettings(); //TODO: get this from settings
         s.sampleRate = AudioRecordListener.SAMPLE_RATE_STANDARD;;
-        s.loudnessThreshold = 0;
+        s.loudnessThreshold = 30;
         s.maxDiffInPercent = 1;
-        s.measurementWindowMs = 100;
+        s.measurementWindowMs = 30;
         s.nofConsecutiveUpwardsCrossingsToMeasure = 4;
         s.gapBetweenSamplesWhenDetectingPause = 100;
         frequencyExtractor = new FrequencyExtractor(s);
@@ -48,36 +48,33 @@ public class BusinessLogicAdapter extends Observable implements Observer  {
             blaListener.onToastNotification(data.toString());
         }
         else {
-
             List<Double> samples = (List<Double>)data;
             int size = samples.size();
-            double[] origSamples = new double[size];
-            double[] tmp = new double[size * 4 + 100];
-            //long timeStart = System.nanoTime();
-            for(int i = 0; i < samples.size(); ++i) {
-                tmp[i] = samples.get(i);
-            }
-            System.arraycopy(tmp, 0, origSamples, 0, size);
-            harmonicsRemover.removeHarmonics(tmp, size);
-            writeSamplesToFile(tmp, size);
-  /*          long timeEnd = System.nanoTime();
-            long diff = (timeEnd - timeStart) / 1000000;
-            Log.d(tag, String.valueOf(diff));*/
-            int i  = 5;
-            int a = i;
-           /* double[] samplesTrimmed = new double[size];
-            System.arraycopy(samples, 0, samplesTrimmed, 0, size);
+            if(size == 0) return;
 
-            double[] freqs = frequencyExtractor.extractFrequencies(samplesTrimmed, origSamples, size);
-            Log.d(tag, "freqs = ");*/
-            /*for(int i = 0; i < freqs.length; ++i) {
-                Log.d(tag, String.valueOf(freqs[i]));
+            double[] samplesOrig = new double[size];
+            for (int i = 0; i < size; ++i) {
+                samplesOrig[i] = samples.get(i);
             }
+
+            double[] samplesWithRemovedHarmonics = new double[size * 4 + 100];
+
+            for (int i = 0; i < size; ++i) {
+                samplesWithRemovedHarmonics[i] = samples.get(i);
+            }
+
+            harmonicsRemover.removeHarmonics(samplesWithRemovedHarmonics, size);
+            //writeSamplesToFile(samplesWithRemovedHarmonics, size);
+
+            double[] freqs = frequencyExtractor.extractFrequencies(samplesWithRemovedHarmonics, samplesOrig, size);
+
             Note[] notes = noteAndDeviationIdentifier.convertWaveformToNotes(freqs);
             blaListener.onNewNotesOrPausesAvailable(notes);
-            Note[] notes = new Note[5];
-            blaListener.onNewNotesOrPausesAvailable(notes);
-            Log.d(tag, "Notes.size = " + notes.length);*/
+            Log.d(tag, "Count = " + String.valueOf(notes.length) + ":");
+            for (int i = 0; i < notes.length; ++i) {
+                Log.d(tag, "Note len = " + String.valueOf(notes[i].lengthMs) + "; Degree = " + String.valueOf(notes[i].degree) +
+                "; Type = " + String.valueOf(notes[i].type));
+            }
         }
     }
 

@@ -87,7 +87,6 @@ AudioRecord.OnRecordPositionUpdateListener {
     public void onPeriodicNotification(AudioRecord recorder) {
         long diff = (System.nanoTime() - audioReaderThreadCallingInterval) / 1000000;
         audioReaderThreadCallingInterval = System.nanoTime();
-        Log.d(tag, String.valueOf(diff) + " t");
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -97,13 +96,9 @@ AudioRecord.OnRecordPositionUpdateListener {
                 }
                 catch (InterruptedException e) {}
             }
-            long timeStart = System.nanoTime();
             List<Double> pressureValues = circularBuffer.removeAll();
             setChanged();
             notifyObservers(pressureValues);
-            long timeEnd = System.nanoTime();
-            long diff = (timeEnd - timeStart) / 1000000;
-            Log.d(tag, String.valueOf(diff));
 
             lock.unlock();
             }
