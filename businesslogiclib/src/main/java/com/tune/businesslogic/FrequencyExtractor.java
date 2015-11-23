@@ -9,9 +9,9 @@ public class FrequencyExtractor extends Observable {
 
     private int sampleRate;
     private ReadingType readingType = ReadingType.ERROR;
-    private double loudnessThreshold = 30;
+    private double loudnessThreshold = 60;
     private int nofConsecutiveUpwardsCrossingsToMeasure = 4;
-    private double measurementWindowMs = 100;
+    private double measurementWindowMs = 30;
     private int samplesLength;
     private int gapBetweenSamplesWhenDetectingPause;
 

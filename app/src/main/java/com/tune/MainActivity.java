@@ -76,14 +76,11 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
             Toast.makeText(this, "The are problems with your microphone, app won't work.", Toast.LENGTH_LONG).show();
             Log.e(tag, "Exception when audioRecordListener.setAudioRecordOptions: " + e.getMessage());
         }
-        businessLogicAdapter = new BusinessLogicAdapter(audioRecordListener, this);
-        businessLogicAdapter.addObserver(this);
-        chartController = new ChartController(1, 100, lineChart, this);
-        chartController.initChart(this.getResources().getConfiguration().orientation);
+
         stopStartButton = (ImageButton) findViewById(R.id.startStopButton);
         stopStartButton.setImageResource(R.drawable.stop);
+        setBLASettingsAndStartIt(0.1);
         listening = true;
-        businessLogicAdapter.startListeningTune();
         stopStartButton.setOnClickListener(new ImageButton.OnClickListener() {
                                                public void onClick(View v) {
                                                    try {
@@ -111,7 +108,17 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
     }
 
     private void setBLASettingsAndStartIt(double diff) {
-        FESettings.maxDiffInPercent = diff;
+        businessLogicAdapter = new BusinessLogicAdapter(audioRecordListener, this);
+        businessLogicAdapter.addObserver(this);
+        ChartController.ChartControllerSettings s = new ChartController.ChartControllerSettings(1, 100, 2, 30, 10);
+        chartController = new ChartController(s, lineChart, this);
+        chartController.initChart(this.getResources().getConfiguration().orientation);
+        FESettings.maxDiffInPercent = 1;
+        FESettings.sampleRate = AudioRecordListener.SAMPLE_RATE_STANDARD;
+        FESettings.loudnessThreshold = 120;
+        FESettings.measurementWindowMs = 30;
+        FESettings.nofConsecutiveUpwardsCrossingsToMeasure = 4;
+        FESettings.gapBetweenSamplesWhenDetectingPause = 100;
         businessLogicAdapter.setFrequencyExtractorOptions(FESettings);
         NDISettings = new NoteAndDeviationIdentifier.NoteIdentifierSettings();
         NDISettings.deviationWhereBorderLineStarts = 40;

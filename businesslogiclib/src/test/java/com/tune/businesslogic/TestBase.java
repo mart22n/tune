@@ -6,6 +6,7 @@ package com.tune.businesslogic;
 public class TestBase {
     protected FrequencyExtractor frequencyExtractor;
     protected NoteAndDeviationIdentifier noteAndDeviationIdentifier;
+    protected RollingAverageFinder rollingAverageFinder;
     protected void setFESettings(int sampleRate, int loudnessThreshold, int nofConsecutiveCrossingsToMeasure,
                                double measurementWindowMs, double maxDiffInPercent, int gapBetweenSamplesWhenDetectingPause) {
         FrequencyExtractor.FrequencyExtractorSettings s = new FrequencyExtractor.FrequencyExtractorSettings();

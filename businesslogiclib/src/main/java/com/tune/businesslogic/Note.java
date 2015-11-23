@@ -9,7 +9,7 @@ import java.util.List;
 public class Note {
     public enum NoteType { UNDEFINED, PAUSE, VALIDNOTE, NOISE, BORDERLINE, OUTOFRANGE };
     private String name;
-    int degree; // 0 - reference note; 12 - 1 octave up; -12 - 1 octave down
+    public int degree; // 0 - reference note; 12 - 1 octave up; -12 - 1 octave down
     public int lengthMs;
     public List<Integer> deviations; // list of deviations for the note
     public NoteType type;

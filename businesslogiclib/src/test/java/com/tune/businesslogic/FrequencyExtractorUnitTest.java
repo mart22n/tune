@@ -36,7 +36,7 @@ public class FrequencyExtractorUnitTest extends TestBase {
     }
 
     @Test
-    public void ifMultipleZeroValuesInARowInInput_roughlyCorrectFreqIsReturned() {
+    public void ifMultipleZeroPressuresInARowInInput_roughlyCorrectFreqIsReturned() {
         double[] samples = {
                 0, 1, 0, 0, 0, -1, 0, 0,
                 0, 1, 0, 0, 0, -1, 0, 0,
