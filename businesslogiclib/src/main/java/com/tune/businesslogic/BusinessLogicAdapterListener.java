@@ -7,7 +7,7 @@ public interface BusinessLogicAdapterListener {
 
     public void onFirstNoteDetected(Note note);
 
-    public void onNewNotesOrPausesAvailable(Note[] notes);
+    public void onNotesOrPausesAvailable(Note[] notes, boolean noteChanged);
 
     public void onToastNotification(String notification);
 }

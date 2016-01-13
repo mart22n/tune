@@ -110,7 +110,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
     private void setBLASettingsAndStartIt(double diff) {
         businessLogicAdapter = new BusinessLogicAdapter(audioRecordListener, this);
         businessLogicAdapter.addObserver(this);
-        ChartController.ChartControllerSettings s = new ChartController.ChartControllerSettings(1, 100, 2, 30, 10);
+        ChartController.ChartControllerSettings s = new ChartController.ChartControllerSettings(1, 100, 2, 30, 3);
         chartController = new ChartController(s, lineChart, this);
         chartController.initChart(this.getResources().getConfiguration().orientation);
         FESettings.maxDiffInPercent = 1;
@@ -242,7 +242,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
     }
 
     @Override
-    public void onNewNotesOrPausesAvailable(final Note[] notes) {
+    public void onNotesOrPausesAvailable(final Note[] notes, final boolean noteChanged) {
         try
         {
             Thread.sleep(400);
@@ -251,7 +251,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                chartController.drawNotes(notes);
+                chartController.drawNotes(notes, noteChanged);
             }
         });
     }

@@ -176,20 +176,33 @@ public class FrequencyExtractor extends Observable {
         boolean crossingsWithEqualIntervalsFound = false;
         int nofCrossings = 0;
         int curIndexOfCrossing = 0;
-        for (int i = offsetInSamples; i < offsetInSamples + nofSamplesInWindow - 1; ++i) {
-            if (valueMovesUpwardsFromZero(samples, i)) {
-                indexesOfCrossings[curIndexOfCrossing++] = i + 1;
-                ++nofCrossings;
-            }
-
-            if (allCrossingsDetected(nofCrossings)) {
-                double avgCrossingInterval = getAvgCrossingInterval(nofCrossings, indexesOfCrossings);
-
-                if(thereIsACrossingIntervalThatDiffersTooMuchFromAvg(indexesOfCrossings, avgCrossingInterval) == false) {
-                    indexesOfCrossings[nofConsecutiveUpwardsCrossingsToMeasure - 1] = i + 1;
-                    crossingsWithEqualIntervalsFound = true;
+        int nofRetries = 0;
+        int retryLimit = 5;
+        boolean windowEnded = false;
+        while(nofRetries++ < retryLimit && crossingsWithEqualIntervalsFound == false && !windowEnded) {
+            for (int i = offsetInSamples; i < samples.length - 1; ++i) {
+                if (valueMovesUpwardsFromZero(samples, i)) {
+                    indexesOfCrossings[curIndexOfCrossing++] = i + 1;
+                    ++nofCrossings;
                 }
-                break;
+
+                if (allCrossingsDetected(nofCrossings)) {
+                    double avgCrossingInterval = getAvgCrossingInterval(nofCrossings, indexesOfCrossings);
+
+                    if (!thereIsACrossingIntervalThatDiffersTooMuchFromAvg(indexesOfCrossings, avgCrossingInterval)) {
+                        indexesOfCrossings[nofConsecutiveUpwardsCrossingsToMeasure - 1] = i + 1;
+                        crossingsWithEqualIntervalsFound = true;
+                        break;
+                    }
+                    offsetInSamples = i + 1;
+                    curIndexOfCrossing = 0;
+                    nofCrossings = 0;
+                    break;
+
+                }
+                if(i == nofSamplesInWindow - 2) {
+                    windowEnded = true;
+                }
             }
         }
         ret = crossingsWithEqualIntervalsFound;

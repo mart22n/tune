@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
@@ -69,7 +70,7 @@ public class BusinessLogicAdapter extends Observable implements Observer  {
             double[] freqs = frequencyExtractor.extractFrequencies(samplesWithRemovedHarmonics, samplesOrig, size);
 
             Note[] notes = noteAndDeviationIdentifier.convertWaveformToNotes(freqs);
-            blaListener.onNewNotesOrPausesAvailable(notes);
+            blaListener.onNotesOrPausesAvailable(notes, noteAndDeviationIdentifier.noteChanged());
             Log.d(tag, "Count = " + String.valueOf(notes.length) + ":");
             for (int i = 0; i < notes.length; ++i) {
                 Log.d(tag, "Note len = " + String.valueOf(notes[i].lengthMs) + "; Degree = " + String.valueOf(notes[i].degree) +

@@ -36,6 +36,24 @@ public class FrequencyExtractorUnitTest extends TestBase {
     }
 
     @Test
+    public void whenNoiseAtTheBeginningOfSample_followedByAFreq_theFreqIsDetected() {
+        double[] samples =
+                {0, 1, 1, 2, -1, 0, -1, 2, 2, 1, 1, 2,
+                        0, 1, 2, 1, 1, -1, -2, -1,
+                        -1, 1, 2, 1, 1, -1, -2, -1,
+                        -1, 1, 2, 1, 1, -1, -2, -1,
+                        -1, 1, 2, 1, 1, -1, -2, -1,
+                        -1, 1, 2, 1, 1, -1, -2, -1,
+                        -1, 1, 2, 1, 1, -1, -2, -1,
+                        -1, 1, 2, 1, 1, -1, -2, -1};
+        int sampleRate = 1000;
+        int measurementWindowLenMs = 68;
+        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
+        Assert.assertEquals(125, (int) frequencyExtractor.extractFrequencies(samples, samples, samples.length)[0]);
+        Assert.assertEquals(FrequencyExtractor.ReadingType.OK, frequencyExtractor.readingType());
+    }
+
+    @Test
     public void ifMultipleZeroPressuresInARowInInput_roughlyCorrectFreqIsReturned() {
         double[] samples = {
                 0, 1, 0, 0, 0, -1, 0, 0,
@@ -100,7 +118,7 @@ public class FrequencyExtractorUnitTest extends TestBase {
     }
 
     @Test
-    public void ifInOneWindowWeHaveFirstlyNoise_andAfterThatValidFreq_invalidFreqIsReturned() {
+    public void ifInOneWindowWeHaveFirstlyNoise_andAfterThatShortValidFreq_invalidFreqIsReturned() {
         double[] samples = {
                 0, 1, 0, -1, 0, -1, 0, -1,
                 0, 1, 0, -1, 0, 1, 0, -1,
@@ -303,7 +321,7 @@ public class FrequencyExtractorUnitTest extends TestBase {
     }
 
     @Test
-    public void ifWindowTooShort_errorIsReturned() {
+    public void ifSampleTooShort_errorIsReturned() {
         double[] samples = {
                 0, 1, 1, 0, -1, -1,    // 166 Hz
                 0, 1, 1, 0, -1, -1,
@@ -314,7 +332,7 @@ public class FrequencyExtractorUnitTest extends TestBase {
 
         int sampleRate = 1000;
         int measurementWindowLenMs = 18;
-        setFESettings(sampleRate, 0, 4, measurementWindowLenMs, 1, 1);
+        setFESettings(sampleRate, 0, 7, measurementWindowLenMs, 1, 1);
         double[] res = frequencyExtractor.extractFrequencies(samples, samples, samples.length);
         Assert.assertEquals(1, res.length);
         Assert.assertEquals(-1.0,res[0]);

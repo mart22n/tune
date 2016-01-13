@@ -3,10 +3,11 @@ package com.tune;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Point;
-import android.graphics.Typeface;
 import android.os.Build;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Display;
+import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.XAxis;
@@ -18,7 +19,6 @@ import com.tune.businesslogic.Note;
 import com.tune.businesslogic.RollingAverageFinder;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -119,7 +119,7 @@ public class ChartController {
         lineChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
         lineChart.getXAxis().setDrawGridLines(false);
         lineChart.getXAxis().setGridColor(Color.WHITE);
-        lineChart.getXAxis().setTextSize(22);
+        lineChart.getXAxis().setTextSize(7);
 /*        LimitLine ll = new LimitLine(2f, "150");
     ll.setLineColor(Color.YELLOW);
     ll.setLineWidth(4f);
@@ -147,7 +147,7 @@ public class ChartController {
             xVals.add("");
         }
 
-        formatDataSet(dsNote1);
+        formatDataSetAsValidNote(dsNote1);
         dataSets.add(dsNote1);
 
         LineData data = new LineData(xVals, dataSets);
@@ -156,7 +156,7 @@ public class ChartController {
         lineChart.invalidate(); // refresh
     }
 
-    private void formatDataSet(LineDataSet lds) {
+    private void formatDataSetAsValidNote(LineDataSet lds) {
         lds.setDrawCubic(true);
         lds.setCubicIntensity(0.2f);
         lds.setDrawFilled(true);
@@ -165,19 +165,41 @@ public class ChartController {
         lds.setDrawCircles(false);
         lds.setDrawValues(false);
         lds.setLineWidth(0.2f);
-        lds.setValueTextSize(22f);
-        lds.setValueTypeface(Typeface.create((String) null, Typeface.BOLD));
+      /*  lds.setValueTextSize(12f);*/
+        //lds.setValueTypeface(Typeface.create((String) null, Typeface.BOLD));
     }
 
-    void drawNotes(Note[] notes) {
+    private void formatDataSetAsNoise(LineDataSet lds) {
+        lds.setDrawCubic(false);
+        lds.setDrawFilled(true);
+        lds.setFillColor(Color.RED);
+        lds.setFillAlpha(255);
+        lds.setDrawCircles(false);
+        lds.setDrawValues(false);
+        lds.setLineWidth(0.2f);
+    }
+
+    void drawNotes(Note[] notes, boolean noteChanged) {
         LineData lineData = lineChart.getData();
+        Log.d("tune", "noteChanged = " + String.valueOf(noteChanged));
 
         List<LineDataSet> existingNotes = lineData.getDataSets();
         for (int i = 0; i < notes.length; ++i) {
             if(notes[i].type == Note.NoteType.PAUSE) {
                 for(int j = 0; j < notes[i].lengthMs / windowLenMs / rollingAverageInputCount; ++j) {
-                    Entry e = new Entry((float) (0), curXIndex + maxViewPortSize + j);
                     lineData.getXVals().add("");
+                }
+                curXIndex += notes[i].lengthMs / windowLenMs / rollingAverageInputCount;
+            }
+            else if(notes[i].type == Note.NoteType.NOISE) {
+                ArrayList<Entry> deviationsOfCurNote = new ArrayList<>();
+                for(int j = 0; j < notes[i].lengthMs / windowLenMs / rollingAverageInputCount; ++j) {
+                    Entry e = new Entry((float) (0.4), curXIndex + maxViewPortSize + j);
+                    lineData.getXVals().add("");
+                    deviationsOfCurNote.add(e);
+                    LineDataSet lds = new LineDataSet(deviationsOfCurNote, "");
+                    formatDataSetAsNoise(lds);
+                    existingNotes.add(lds);
                 }
                 curXIndex += notes[i].lengthMs / windowLenMs / rollingAverageInputCount;
             }
@@ -191,22 +213,32 @@ public class ChartController {
                 for (int j = 0; j < averageDeviations.size(); ++j) {
                     Entry e = new Entry((float)(double)(averageDeviations.get(j)) / 100, curXIndex + maxViewPortSize + j);
                     deviationsOfCurNote.add(e);
-                    if (j == (averageDeviations.size() / 2)) {
-                        lineData.getXVals().add(String.valueOf(notes[i].degree));
+                    if (j == 0) {
+                        if(noteChanged) {
+                            lineData.getXVals().add(String.valueOf(notes[i].degree));
+                            Toast.makeText(mainActivity.getApplicationContext(), String.valueOf(notes[i].degree), Toast.LENGTH_SHORT).show();
+                        }
+                        else {
+                            lineData.getXVals().add("");
+                        }
                     } else {
                         lineData.getXVals().add("");
                     }
                     LineDataSet lds = new LineDataSet(deviationsOfCurNote, "");
-                    formatDataSet(lds);
+                    formatDataSetAsValidNote(lds);
                     existingNotes.add(lds);
                 }
-                curXIndex += averageDeviations.size();
+
+                curXIndex += averageDeviations.size() - 1;//notes[i].deviations.size();// / rollingAverageInputCount;
+                lineData.getXVals().remove(lineData.getXVals().size() - 1);
             }
+            Log.d("tune", "curXIndex = " + curXIndex);
         }
 
 
         lineChart.setVisibleXRange(0, maxViewPortSize);
-        lineChart.centerViewTo(lineData.getXValCount() - maxViewPortSize / 2, 0, YAxis.AxisDependency.RIGHT);
+        //lineChart.centerViewTo(lineData.getXValCount() - maxViewPortSize / 2, 0, YAxis.AxisDependency.RIGHT);
+        lineChart.centerViewTo(curXIndex + maxViewPortSize / 2, 0, YAxis.AxisDependency.RIGHT);
         lineChart.notifyDataSetChanged();
         lineChart.invalidate();
 /*

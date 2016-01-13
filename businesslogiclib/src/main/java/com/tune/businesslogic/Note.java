@@ -33,6 +33,56 @@ public class Note {
             this.type = NoteType.BORDERLINE;
     }
 
+    public boolean hasSameTypeOrDegree(Note n2) {
+        if(type == NoteType.VALIDNOTE || type == NoteType.BORDERLINE) {
+            if (n2.type == type && n2.degree == degree) {
+                return true;
+            }
+        }
+        else if (type == n2.type) {
+            return true;
+        }
+        return false;
+    }
+
+    public void makeLonger(int howManyMsToLengthen, int howManyDeviationsToAdd) {
+        if(type == NoteType.VALIDNOTE || type == NoteType.BORDERLINE) {
+            for (int i = 0; i < howManyDeviationsToAdd; ++i) {
+                deviations.add(deviations.get(deviations.size() - 1));
+            }
+        }
+        this.lengthMs += howManyMsToLengthen;
+    }
+
+    public void makeLonger(int howManyMsToLengthen, int howManyDeviationsToAdd, boolean addDeviationsToTheRight) {
+        if(type == NoteType.VALIDNOTE || type == NoteType.BORDERLINE) {
+            for (int i = 0; i < howManyDeviationsToAdd; ++i) {
+                if(addDeviationsToTheRight == true) {
+                    deviations.add(deviations.get(deviations.size() - 1));
+                }
+                else {
+                    deviations.add(0, deviations.get(0));
+                }
+            }
+        }
+        this.lengthMs += howManyMsToLengthen;
+    }
+
+    public void concatenate(Note n2) {
+        lengthMs += n2.lengthMs;
+        degree = n2.degree;
+        if(((type == NoteType.VALIDNOTE || type == NoteType.BORDERLINE) && (n2.type == Note.NoteType.VALIDNOTE || n2.type == Note.NoteType.BORDERLINE))) {
+            for (int j = 0; j < n2.deviations.size(); ++j) {
+                addDeviation(n2.getDeviation(j), n2.type == Note.NoteType.BORDERLINE);
+            }
+            if(n2.type == Note.NoteType.BORDERLINE) {
+                type = Note.NoteType.BORDERLINE;
+            }
+        }
+        if(type == NoteType.UNDEFINED)
+            type = n2.type;
+    }
+
     public int getDeviation(int index) {
         return deviations.get(index);
     }
