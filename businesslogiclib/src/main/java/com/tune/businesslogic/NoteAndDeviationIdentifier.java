@@ -15,6 +15,7 @@ public class NoteAndDeviationIdentifier {
         public int minNoteLenMs;
         public int octaveSpan; // this many octaves can a note be below or above reference freq to still be valid
         public int deviationWhereBorderLineStarts;
+        public boolean hasPredefinedCNote;
     }
 
     private int measurementWindowMs;
@@ -24,11 +25,14 @@ public class NoteAndDeviationIdentifier {
     private double[] freqsOfDegrees;
     private int octaveSpan;
     private int deviationWhereBorderLineStarts;
-    private int curNonNoiseNoteStartIndexInInputWindows;
-    private int curNoiseNoteStartIndexInInputWindows;
+    private int curNonNoiseNoteStartIndexInWholeInput;
+    private int curNoiseNoteStartIndexInWholeInput;
     private Note curNote = new Note();
     private Note prevNote = new Note();
+    private Note curNonNoiseNote = new Note();
+    private Note curNoiseNote = initializeNote(Note.NoteType.NOISE);
     private boolean noteChanged = false;
+    private boolean hasPredefinedCNote = false;
 
     NoteAndDeviationIdentifier(NoteIdentifierSettings settings) {
         this.measurementWindowMs = settings.measurementWindowMs;
@@ -36,7 +40,7 @@ public class NoteAndDeviationIdentifier {
         this.referenceFreq = -1;
         this.octaveSpan = settings.octaveSpan;
         this.deviationWhereBorderLineStarts = settings.deviationWhereBorderLineStarts;
-
+        this.hasPredefinedCNote = settings.hasPredefinedCNote;
     }
 
     boolean noteChanged() {
@@ -50,54 +54,58 @@ public class NoteAndDeviationIdentifier {
 
     Note[] convertWaveformToNotes(double[] inputWindows) {
         List<Note> notes = new ArrayList<>();
-        Note curNoiseNote = new Note();
-        curNoiseNote.type = Note.NoteType.NOISE;
-        Note curNonNoiseNote = new Note();
         Note.NoteType curNoteType;
-
-        getReferenceFreqAndFindDegreeFreqs(inputWindows);
+        boolean nonNoiseNoteEndedInLastWindow = false;
+        findReferenceFreq(inputWindows);
         if(referenceFreq == -1) {
             return notes.toArray(new Note[notes.size()]);
         }
+        if(hasPredefinedCNote) {
+            setReferenceFreqAsNearestLowerCNote();
+        }
+        calculateDegreeFreqs();
 
-        curNonNoiseNoteStartIndexInInputWindows = 0;
-        curNoiseNoteStartIndexInInputWindows = 0;
+        curNonNoiseNoteStartIndexInWholeInput = 0;
+        curNoiseNoteStartIndexInWholeInput = 0;
 
         for (int i = 0; i < inputWindows.length; ++i) {
             curNoteType = getNoteTypeFromInput(inputWindows[i]);
             Note curWindowNote = initializeNote(inputWindows[i]);
             if (i > 0) {
-                /*if(newNoteBegan(inputWindows, curNoteType, i)) {
-                    /*[o] if curNon long enough: 1) Do lookahead: if window ends after curnon with a glitch, merge glitch into curnon and add curNon to notes. break (case a)
-                    2) [ ] if window lasts a long time after curnon, do a lookahead to find if we have a glitch after curnon, followed by a long
-                    continuation of curnon. Merge the glitch into curnon. If the lookahead returns true, concatenate the following continuation
+                /*  [o] if curNonNoiseNote long enough: 1) Do lookahead: if window ends after curNonNoiseNote with a glitch, merge glitch into curNonNoiseNote and
+                    add curNonNoiseNote to notes. break (case a)
+                    2) [ ] if window lasts a long time after curnon, do a lookahead to find if we have a glitch after curNonNoiseNote, followed by a long
+                    continuation of curNonNoiseNote. Merge the glitch into curNonNoiseNote. If the lookahead returns true, concatenate the following continuation
                     into curnon. If after the continuation note there are no more windows,
                      add curNon to notes and break (case c). If after the continuation note there are more windows, update curNoiseIndex and
                      curNonIndex to point right after the continuation note. (case d) 2.5) [ ] If instead of the continuation note
                      there is a different long note, add curNon to notes and update both curNonStartIndex and curNoiseStartIndex to point right after the
                       glitch (case e)
-                     3) [ ] if window lasts a long time after curnon, do a lookahead to find if we have a glitch after curnon, followed by a long
-                    continuation of curnon. If the lookahead returns false and we have a long enough noise after curnon, add curNon to notes, update
+                     3) [ ] if window lasts a long time after curNonNoiseNote, do a lookahead to find if we have a glitch after curNonNoiseNote, followed by a long
+                    continuation of curNonNoiseNote. If the lookahead returns false and we have a long enough noise after curNonNoiseNote, add curNon to notes, update
                     curNonIndex. After that start doing a lookahead search to find out where the long enough noise ends: the noise ends, where we have 4) [ ]
-                    a big enough number of similar note windows after the noise. Add curNoise to notes when we have identified the length of noise,
+                    a big enough number of similar note windows after the noise. Add curNoiseNote to notes when we have identified the length of noise,
                     and update curNoiseIndex and curNonIndex both to point right after the noise. (case i) 5) similar case as 4, but we don't have any
                     more windows after the noise. Then add noise to notes and break (case j). 5.5) [ ] Do lookahead: if window continues after next long enough note,
                     update curNonIndex and curNoiseIndex to point at the start of next long enough note; assign curWindowNote to curNon and curNoise; continue the loop
                     (case k, l)
-                     6) [ ] if curnon not long enough && curnoise not long enough, do lookahead, to find out where long enough nonnoise note starts.
+                     6) [ ] if curNonNoiseNote not long enough && curNoiseNote not long enough, do lookahead, to find out where long enough nonnoise note starts.
                      When found, update curNonIndex to that position. Find the end of curNon, and merge
-                     curNoise into curnon; then add curNon to notes. If no more windows, break (case b)
+                     curNoise into curNonNoiseNote; then add curNon to notes. If no more windows, break (case b)
                      7) [ ] Same as 6, but instead of "if no more windows, break", we have more windows. Update curNonIndex and curNoiseIndex
                       to point right after end of curNOn; assign curWindowNote to curNon and curNoise and do a continue-clause (case g and f)
-                      8) [ ] if curnon not long enough && curnoise long enough, do lookahead, to find out where long enough nonnoise starts. Add
+                      8) [ ] if curNonNoiseNote not long enough && curNoiseNote long enough, do lookahead, to find out where long enough nonnoise starts. Add
                       curNoise to notes, update curNoiseIndex and curNonIndex to point at the beginning of nonnoise; assign curWindowNote to curNon
                       and curNoise and continue the loop (case h). If new note did not begin, just concatenate curWindowNote to curNon and to curNoise.
                      */
                 if (newNoteBegan(inputWindows, curNoteType, i)) {
-                    if (noteLongEnough(curNonNoiseNote)) {
+                    if (noteLongEnough(curNonNoiseNote) || nonNoiseNoteEndedInLastWindow) {
+                        nonNoiseNoteEndedInLastWindow = false;
+                        curNoiseNote = initializeNote(Note.NoteType.NOISE);
+                        curNoiseNoteStartIndexInWholeInput = i;
                         if (inputWindows.length < i + minNoteLenMs / measurementWindowMs) {
                             // case a
-                            mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote, (inputWindows.length - i) * measurementWindowMs);
+                            mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote);
                             notes.add(curNonNoiseNote);
                             curNote = new Note(curNonNoiseNote);
                             break;
@@ -108,11 +116,12 @@ public class NoteAndDeviationIdentifier {
                             boolean sameNoteContinuesForALongTimeUntilEndOfInput = false;
                             boolean sameNoteContinuesForAShortTimeUntilEndOfInput = false;
                             boolean differentNoteStartsAfterNoise = false;
-                            for (int j = i; j < inputWindows.length; ++j) {
+                            for (int j = i + 1; j < inputWindows.length; ++j) {
                                 if (curNonNoiseNote.hasSameTypeOrDegree(initializeNote(inputWindows[j]))) {
                                     sameNoteContinuesAfterNoise = noteContinuesAfterNoise(inputWindows, curNonNoiseNote, j);
                                     if (sameNoteContinuesAfterNoise) {
                                         nextNonNoiseNoteStartIndex = j;
+                                        curNoiseNote.makeLonger((nextNonNoiseNoteStartIndex - i - 1) * minNoteLenMs, 0);
                                     }
                                     sameNoteContinuesForALongTimeUntilEndOfInput = sameNoteContinuesForALongTimeUntilEndOfInput(inputWindows, curNonNoiseNote, j);
                                     if(!sameNoteContinuesForALongTimeUntilEndOfInput) {
@@ -125,7 +134,7 @@ public class NoteAndDeviationIdentifier {
                             if (sameNoteContinuesAfterNoise) {
                                 if (sameNoteContinuesForALongTimeAfterGlitch(i, nextNonNoiseNoteStartIndex)) {
                                     if (sameNoteContinuesForALongTimeUntilEndOfInput) {
-                                        mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote, (nextNonNoiseNoteStartIndex - i) * measurementWindowMs);
+                                        mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote);
                                         Note notesOtherPartAfterGlitch = initializeNote(inputWindows[nextNonNoiseNoteStartIndex]);
                                         for (int j = nextNonNoiseNoteStartIndex + 1; j < inputWindows.length; ++j) {
                                             notesOtherPartAfterGlitch.concatenate(initializeNote((inputWindows[j])));
@@ -133,7 +142,7 @@ public class NoteAndDeviationIdentifier {
                                         curNonNoiseNote.concatenate(notesOtherPartAfterGlitch);
                                         notes.add(curNonNoiseNote);
                                         curNote = new Note(curNonNoiseNote);
-
+                                        nonNoiseNoteEndedInLastWindow = true;
                                         break;
                                     } else {
                                         // case d
@@ -150,17 +159,17 @@ public class NoteAndDeviationIdentifier {
                                             notesOtherPartAfterGlitch.concatenate(initializeNote((inputWindows[j])));
                                         }
 
-                                        mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote, (nextNonNoiseNoteStartIndex - i) * measurementWindowMs);
+                                        mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote);
                                         curNonNoiseNote.concatenate(notesOtherPartAfterGlitch);
 
                                         notes.add(curNonNoiseNote);
                                         curNote = new Note(curNonNoiseNote);
-
-                                        curNonNoiseNoteStartIndexInInputWindows = nextNonNoiseNoteStartIndex + lenOfNotesOtherPartAfterGlitch;
-                                        curNoiseNoteStartIndexInInputWindows = curNonNoiseNoteStartIndexInInputWindows;
-                                        i = curNonNoiseNoteStartIndexInInputWindows - 1;
-                                        curNonNoiseNote = initializeNote(inputWindows[i]);
-                                        curNoiseNote = initializeNote(inputWindows[i]);
+                                        nonNoiseNoteEndedInLastWindow = true;
+                                        curNonNoiseNoteStartIndexInWholeInput = nextNonNoiseNoteStartIndex + lenOfNotesOtherPartAfterGlitch;
+                                        curNoiseNoteStartIndexInWholeInput = curNonNoiseNoteStartIndexInWholeInput;
+                                        i = curNonNoiseNoteStartIndexInWholeInput - 1;
+                                        curNonNoiseNote = initializeNote(inputWindows[i + 1]);
+                                        curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                         curNoiseNote.type = Note.NoteType.NOISE;
                                     }
                                 } else {
@@ -171,35 +180,33 @@ public class NoteAndDeviationIdentifier {
                                     notes.add(curNonNoiseNote);
                                     curNote = new Note(curNonNoiseNote);
 
-                                    curNoiseNote = initializeNote(inputWindows[i]);
-                                    curNoiseNote.type = Note.NoteType.NOISE;
+                                    curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                     for (int j = i + 1; j < nextNonNoiseNoteStartIndex; ++j) {
-                                        curNoiseNote.concatenate(initializeNote(inputWindows[j]));
+                                        curNoiseNote.concatenate(initializeNote(Note.NoteType.NOISE));
                                     }
 
                                     notes.add(curNoiseNote);
                                     curNote = new Note(curNoiseNote);
-                                    curNonNoiseNoteStartIndexInInputWindows = nextNonNoiseNoteStartIndex;
-                                    curNoiseNoteStartIndexInInputWindows = curNonNoiseNoteStartIndexInInputWindows;
-                                    i = curNonNoiseNoteStartIndexInInputWindows - 1;
+                                    curNonNoiseNoteStartIndexInWholeInput = nextNonNoiseNoteStartIndex;
+                                    curNoiseNoteStartIndexInWholeInput = curNonNoiseNoteStartIndexInWholeInput;
+                                    i = curNonNoiseNoteStartIndexInWholeInput - 1;
                                     curNonNoiseNote = initializeNote(inputWindows[i]);
-                                    curNoiseNote = initializeNote(inputWindows[i]);
-                                    curNoiseNote.type = Note.NoteType.NOISE;
+                                    curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                 }
                             } else {
                                 differentNoteStartsAfterNoise = differentNoteStartsAfterNoise(inputWindows, i);
                                 if(!differentNoteStartsAfterNoise) {
                                     if (sameNoteContinuesForALongTimeUntilEndOfInput) {
-                                        curNoiseNote = initializeNote(inputWindows[i]);
+                                        curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                         curNoiseNote.type = Note.NoteType.NOISE;
                                         for (int j = i + 1; j < nextNonNoiseNoteStartIndex; ++j) {
-                                            curNoiseNote.concatenate(initializeNote(inputWindows[j]));
+                                            curNoiseNote.concatenate(initializeNote(Note.NoteType.NOISE));
                                         }
-                                        mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote, (inputWindows.length - i) * measurementWindowMs);
+                                        mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote);
                                     } else {
 
                                         if (sameNoteContinuesForAShortTimeUntilEndOfInput) {
-                                            mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote, (inputWindows.length - i) * measurementWindowMs);
+                                            mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote);
                                             notes.add(curNonNoiseNote);
                                             curNote = new Note(curNonNoiseNote);
                                             break;
@@ -208,11 +215,11 @@ public class NoteAndDeviationIdentifier {
                                             // case k
                                             notes.add(curNonNoiseNote);
                                             curNote = new Note(curNonNoiseNote);
-                                            curNonNoiseNoteStartIndexInInputWindows = i;
-                                            curNoiseNoteStartIndexInInputWindows = curNonNoiseNoteStartIndexInInputWindows;
+                                            nonNoiseNoteEndedInLastWindow = true;
+                                            curNonNoiseNoteStartIndexInWholeInput = i;
+                                            curNoiseNoteStartIndexInWholeInput = curNonNoiseNoteStartIndexInWholeInput;
                                             curNonNoiseNote = initializeNote(inputWindows[i]);
-                                            curNoiseNote = initializeNote(inputWindows[i]);
-                                            curNoiseNote.type = Note.NoteType.NOISE;
+                                            curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                             continue;
                                         }
                                     }
@@ -223,36 +230,41 @@ public class NoteAndDeviationIdentifier {
                                         nextNonNoiseNoteStartIndex = findStartIndexOfNextLongEnoughNonNoiseNote(inputWindows, i);
                                         if(nextNonNoiseNoteStartIndex == i) {
                                             // no noise between notes
-                                            curNonNoiseNoteStartIndexInInputWindows = nextNonNoiseNoteStartIndex;
-                                            curNoiseNoteStartIndexInInputWindows = curNonNoiseNoteStartIndexInInputWindows;
+                                            curNonNoiseNoteStartIndexInWholeInput = nextNonNoiseNoteStartIndex;
+                                            curNoiseNoteStartIndexInWholeInput = curNonNoiseNoteStartIndexInWholeInput;
                                             notes.add(curNonNoiseNote);
+                                            nonNoiseNoteEndedInLastWindow = true;
                                             curNote = new Note(curNonNoiseNote);
                                             curNonNoiseNote = initializeNote(inputWindows[i]);
-                                            curNoiseNote = initializeNote(inputWindows[i]);
-                                            curNoiseNote.type = Note.NoteType.NOISE;
+                                            curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                             continue;
                                         }
                                         // case e
-                                        curNoiseNote = initializeNote(inputWindows[i]);
-                                        curNoiseNote.type = Note.NoteType.NOISE;
+                                        curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                         for (int j = i + 1; j < nextNonNoiseNoteStartIndex; ++j) {
-                                            curNoiseNote.concatenate(initializeNote(inputWindows[j]));
+                                            curNoiseNote.concatenate(initializeNote(Note.NoteType.NOISE));
                                         }
-                                        curNonNoiseNote.makeLonger((nextNonNoiseNoteStartIndex - i) * measurementWindowMs, (nextNonNoiseNoteStartIndex - i));
+                                        if(curNoiseNote.lengthMs < minNoteLenMs) {
+                                            curNonNoiseNote.makeLonger(curNoiseNote.lengthMs, curNoiseNote.lengthMs / measurementWindowMs);
+                                        }
+                                        else {
+                                            curNonNoiseNote.makeLonger((nextNonNoiseNoteStartIndex - i - 1) * measurementWindowMs, (nextNonNoiseNoteStartIndex - i - 1));
+                                        }
+                                        if(curNoiseNote.lengthMs >= minNoteLenMs) {
+                                            notes.add(curNoiseNote);
+                                        }
                                         notes.add(curNonNoiseNote);
                                         curNote = new Note(curNonNoiseNote);
-                                        curNonNoiseNoteStartIndexInInputWindows = nextNonNoiseNoteStartIndex;
-                                        curNoiseNoteStartIndexInInputWindows = curNonNoiseNoteStartIndexInInputWindows;
-                                        i = curNonNoiseNoteStartIndexInInputWindows - 1;
+                                        curNonNoiseNoteStartIndexInWholeInput = nextNonNoiseNoteStartIndex + curNonNoiseNote.lengthMs / measurementWindowMs;
+                                        curNoiseNoteStartIndexInWholeInput = curNonNoiseNoteStartIndexInWholeInput;
+                                        i = curNonNoiseNoteStartIndexInWholeInput - 1;
                                         curNonNoiseNote = initializeNote(inputWindows[i]);
-                                        curNoiseNote = initializeNote(inputWindows[i]);
-                                        curNoiseNote.type = Note.NoteType.NOISE;
+                                        curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                     } else {
                                         // case j
-                                        curNoiseNote = initializeNote(inputWindows[i]);
-                                        curNoiseNote.type = Note.NoteType.NOISE;
+                                        curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                         for (int j = i + 1; j < inputWindows.length; ++j) {
-                                            curNoiseNote.concatenate(initializeNote(inputWindows[j]));
+                                            curNoiseNote.concatenate(initializeNote(Note.NoteType.NOISE));
                                         }
                                         notes.add(curNoiseNote);
                                         curNote = new Note(curNoiseNote);
@@ -263,78 +275,68 @@ public class NoteAndDeviationIdentifier {
                         }
 
                     } else {
+                        nonNoiseNoteEndedInLastWindow = false;
+                        curNoiseNote.concatenate(curWindowNote);
                         if (!noteLongEnough(curNoiseNote)) {
-                            int noiseStartIndex = findStartIndexOfNextLongEnoughNoiseNote(inputWindows, i);
-                            int nonNoiseNoteStartIndex = findStartIndexOfNextLongEnoughNonNoiseNote(inputWindows, i);
+                            int noiseStartIndexInCurWindow = findStartIndexOfNextLongEnoughNoiseNote(inputWindows, i == 1 ? i - 1 : i);
+                            int nonNoiseNoteStartIndexInCurWindow = findStartIndexOfNextLongEnoughNonNoiseNote(inputWindows, i);
 
-                            if(noiseStartIndex > i && noiseStartIndex < nonNoiseNoteStartIndex && nonNoiseNoteStartIndex -
-                                    noiseStartIndex >= minNoteLenMs / measurementWindowMs) {
-                                curNoiseNote.type = Note.NoteType.NOISE;
-                                for (int j = curNoiseNoteStartIndexInInputWindows + 1; j < nonNoiseNoteStartIndex; ++j) {
-                                    curNoiseNote.concatenate(initializeNote(inputWindows[j]));
-                                }
+                            if(noiseStartIndexInCurWindow > 0 && noiseStartIndexInCurWindow < nonNoiseNoteStartIndexInCurWindow && nonNoiseNoteStartIndexInCurWindow -
+                                    noiseStartIndexInCurWindow >= minNoteLenMs / measurementWindowMs) {
+                                mergePrevNoiseIntoCurNoiseNote(nonNoiseNoteStartIndexInCurWindow);
                                 notes.add(curNoiseNote);
                                 curNote = new Note(curNoiseNote);
-                                curNonNoiseNoteStartIndexInInputWindows = nonNoiseNoteStartIndex;
-                                curNoiseNoteStartIndexInInputWindows = curNonNoiseNoteStartIndexInInputWindows;
-                                i = curNonNoiseNoteStartIndexInInputWindows - 1;
-                                curNoiseNote = initializeNote(inputWindows[i]);
-                                curNoiseNote.type = Note.NoteType.NOISE;
+                                curNonNoiseNoteStartIndexInWholeInput = nonNoiseNoteStartIndexInCurWindow;
+                                curNoiseNoteStartIndexInWholeInput = curNonNoiseNoteStartIndexInWholeInput;
+                                i = curNonNoiseNoteStartIndexInWholeInput - 1;
+                                curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                 curNonNoiseNote = initializeNote(inputWindows[i]);
                             }
                             else {
-                                if (nonNoiseNoteStartIndex >= i) {
-                                    int curNonNoiseNoteLenBeforeMergingGlitch = findNonNoiseNoteLen(inputWindows, nonNoiseNoteStartIndex);
-                                    curNonNoiseNote = initializeNote(inputWindows[nonNoiseNoteStartIndex]);
-                                    for (int j = 1; j < curNonNoiseNoteLenBeforeMergingGlitch; ++j) {
-                                        curNonNoiseNote.concatenate(initializeNote(inputWindows[nonNoiseNoteStartIndex + j]));
+                                if (nonNoiseNoteStartIndexInCurWindow >= i) {
+                                    int curNonNoiseNoteLenBeforeMergingNoiseIntoIt = findNonNoiseNoteLen(inputWindows, nonNoiseNoteStartIndexInCurWindow);
+                                    curNonNoiseNote = initializeNote(inputWindows[nonNoiseNoteStartIndexInCurWindow]);
+                                    for (int j = 1; j < curNonNoiseNoteLenBeforeMergingNoiseIntoIt; ++j) {
+                                        curNonNoiseNote.concatenate(initializeNote(inputWindows[nonNoiseNoteStartIndexInCurWindow + j]));
                                     }
 
-                                    if (nonNoiseNoteStartIndex - i < minNoteLenMs / measurementWindowMs) {
+                                    if (nonNoiseNoteStartIndexInCurWindow - i + 1 < minNoteLenMs / measurementWindowMs) {
 
-                                        curNonNoiseNote.makeLonger((nonNoiseNoteStartIndex - curNoiseNoteStartIndexInInputWindows) * measurementWindowMs,
-                                                nonNoiseNoteStartIndex - curNoiseNoteStartIndexInInputWindows, false);
+                                        curNonNoiseNote.makeLonger((nonNoiseNoteStartIndexInCurWindow - curNoiseNoteStartIndexInWholeInput) * measurementWindowMs,
+                                                nonNoiseNoteStartIndexInCurWindow - curNoiseNoteStartIndexInWholeInput, false);
                                         if (notes.size() > 0 && notes.get(notes.size() - 1).hasSameTypeOrDegree(curNonNoiseNote)) {
                                             notes.get(notes.size() - 1).concatenate(curNonNoiseNote);
                                         } else {
                                             notes.add(curNonNoiseNote);
                                             curNote = new Note(curNonNoiseNote);
                                         }
-                                        if (nonNoiseNoteStartIndex + curNonNoiseNoteLenBeforeMergingGlitch == inputWindows.length)
+                                        if (curNonNoiseNoteReachesEndOfInput(inputWindows, nonNoiseNoteStartIndexInCurWindow, curNonNoiseNoteLenBeforeMergingNoiseIntoIt))
                                             // case b
                                             break;
                                         else {
                                             // case g and f
-                                            curNonNoiseNoteStartIndexInInputWindows = nonNoiseNoteStartIndex + curNonNoiseNoteLenBeforeMergingGlitch;
-                                            curNoiseNoteStartIndexInInputWindows = curNonNoiseNoteStartIndexInInputWindows;
-                                            i = curNonNoiseNoteStartIndexInInputWindows - 1;
-                                            curNoiseNote = initializeNote(inputWindows[i]);
-                                            curNoiseNote.type = Note.NoteType.NOISE;
-                                            curNonNoiseNote = initializeNote(inputWindows[i]);
+                                            i = resetCurNonNoiseNoteAndCurNoiseNoteAndReturnUpdatedCurInputIndex(inputWindows, nonNoiseNoteStartIndexInCurWindow, curNonNoiseNoteLenBeforeMergingNoiseIntoIt);
                                         }
                                     } else {
                                         // long enough noise before long nonnoise note
-                                        curNoiseNote = initializeNote(inputWindows[i]);
-                                        curNoiseNote.type = Note.NoteType.NOISE;
-                                        for (int j = i + 1; j < nonNoiseNoteStartIndex; ++j) {
-                                            curNoiseNote.concatenate(initializeNote(inputWindows[j]));
+                                        curNoiseNote = initializeNote(Note.NoteType.NOISE);
+                                        for (int j = i + 1; j < nonNoiseNoteStartIndexInCurWindow; ++j) {
+                                            curNoiseNote.concatenate(initializeNote(Note.NoteType.NOISE));
                                         }
                                         notes.add(curNoiseNote);
                                         curNote = new Note(curNoiseNote);
-                                        curNonNoiseNoteStartIndexInInputWindows = nonNoiseNoteStartIndex;
-                                        curNoiseNoteStartIndexInInputWindows = curNonNoiseNoteStartIndexInInputWindows;
-                                        i = curNonNoiseNoteStartIndexInInputWindows - 1;
-                                        curNoiseNote = initializeNote(inputWindows[i]);
-                                        curNoiseNote.type = Note.NoteType.NOISE;
+                                        curNonNoiseNoteStartIndexInWholeInput = nonNoiseNoteStartIndexInCurWindow;
+                                        curNoiseNoteStartIndexInWholeInput = curNonNoiseNoteStartIndexInWholeInput;
+                                        i = curNonNoiseNoteStartIndexInWholeInput - 1;
+                                        curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                         curNonNoiseNote = initializeNote(inputWindows[i]);
                                     }
                                 } else {
                                     int startIndexOfNextLongEnoughNoise = findStartIndexOfNextLongEnoughNoiseNote(inputWindows, i);
                                     if (startIndexOfNextLongEnoughNoise >= i) {
-                                        curNoiseNote = initializeNote(inputWindows[i]);
-                                        curNoiseNote.type = Note.NoteType.NOISE;
+                                        curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                         for (int j = i + 1; j < inputWindows.length; ++j) {
-                                            curNoiseNote.concatenate(initializeNote(inputWindows[j]));
+                                            curNoiseNote.concatenate(initializeNote(Note.NoteType.NOISE));
                                         }
                                         notes.add(curNoiseNote);
                                         curNote = new Note(curNoiseNote);
@@ -353,16 +355,15 @@ public class NoteAndDeviationIdentifier {
                                 // case h
                                 notes.add(curNoiseNote);
                                 curNote = new Note(curNoiseNote);
-                                curNonNoiseNoteStartIndexInInputWindows = nonNoiseNoteStartIndex;
-                                curNoiseNoteStartIndexInInputWindows = curNonNoiseNoteStartIndexInInputWindows;
-                                i = curNonNoiseNoteStartIndexInInputWindows - 1;
-                                curNoiseNote = initializeNote(inputWindows[i]);
-                                curNoiseNote.type = Note.NoteType.NOISE;
+                                curNonNoiseNoteStartIndexInWholeInput = nonNoiseNoteStartIndex;
+                                curNoiseNoteStartIndexInWholeInput = curNonNoiseNoteStartIndexInWholeInput;
+                                i = curNonNoiseNoteStartIndexInWholeInput - 1;
+                                curNoiseNote = initializeNote(Note.NoteType.NOISE);
                                 curNonNoiseNote = initializeNote(inputWindows[i]);
                             }
                             else {
                                 if (inputWindows.length < i + minNoteLenMs / measurementWindowMs) {
-                                    mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote, (inputWindows.length - i) * measurementWindowMs);
+                                    mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(curNonNoiseNote, curNoiseNote);
                                     notes.add(curNonNoiseNote);
                                     curNote = new Note(curNonNoiseNote);
                                     break;
@@ -371,10 +372,17 @@ public class NoteAndDeviationIdentifier {
                         }
                     }
                 } else {
-                    curNoiseNote.concatenate(curWindowNote);
                     curNonNoiseNote.concatenate(curWindowNote);
+                   /* if(curNonNoiseNote.lengthMs < minNoteLenMs) {
+                        curNoiseNote.concatenate(curWindowNote);
+                    }
+                    else {
+                        curNoiseNote = initializeNote(Note.NoteType.NOISE);
+                        curNoiseNoteStartIndexInWholeInput = i + 1;
+                    }*/
                     if(i == inputWindows.length - 1 && noteLongEnough(curNonNoiseNote)) {
                         notes.add(curNonNoiseNote);
+                        nonNoiseNoteEndedInLastWindow = true;
                         curNote = new Note(curNonNoiseNote);
                     }
                 }
@@ -385,6 +393,27 @@ public class NoteAndDeviationIdentifier {
             }
         }
         return notes.toArray(new Note[notes.size()]);
+    }
+
+    private void mergePrevNoiseIntoCurNoiseNote(int nonNoiseNoteStartIndexInCurWindow) {
+        for (int j = curNoiseNoteStartIndexInWholeInput + 1; j < nonNoiseNoteStartIndexInCurWindow; ++j) {
+            curNoiseNote.concatenate(initializeNote(Note.NoteType.NOISE));
+        }
+    }
+
+    private int resetCurNonNoiseNoteAndCurNoiseNoteAndReturnUpdatedCurInputIndex(double[] inputWindows, int nonNoiseNoteStartIndex, int curNonNoiseNoteLenBeforeMergingNoiseIntoIt) {
+        int i;
+        curNonNoiseNoteStartIndexInWholeInput = nonNoiseNoteStartIndex + curNonNoiseNoteLenBeforeMergingNoiseIntoIt;
+        curNoiseNoteStartIndexInWholeInput = curNonNoiseNoteStartIndexInWholeInput;
+        i = curNonNoiseNoteStartIndexInWholeInput - 1;
+        curNoiseNote = initializeNote(inputWindows[i]);
+        curNoiseNote.type = Note.NoteType.NOISE;
+        curNonNoiseNote = initializeNote(inputWindows[i]);
+        return i;
+    }
+
+    private boolean curNonNoiseNoteReachesEndOfInput(double[] inputWindows, int nonNoiseNoteStartIndex, int curNonNoiseNoteLenBeforeMergingNoiseIntoIt) {
+        return nonNoiseNoteStartIndex + curNonNoiseNoteLenBeforeMergingNoiseIntoIt == inputWindows.length;
     }
 
     private int findNonNoiseNoteLen(double[] inputWindows, int nonNoiseNoteStartIndex) {
@@ -526,7 +555,7 @@ public class NoteAndDeviationIdentifier {
         return ret;
     }
 
-    private void getReferenceFreqAndFindDegreeFreqs(double[] inputWindows) {
+    private void findReferenceFreq(double[] inputWindows) {
         if(referenceFreq != -1)
             return;
         int startIndexOfNote = 0;
@@ -538,7 +567,6 @@ public class NoteAndDeviationIdentifier {
                     continue;
                 } else {
                     referenceFreq = inputWindows[startIndexOfNote];
-                    calculateDegreeFreqs();
                     break;
                 }
             }
@@ -555,20 +583,24 @@ public class NoteAndDeviationIdentifier {
         }*/
     }
 
-    private void mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(Note curNonNoiseNote, Note curNoiseNote, int howMuchToLengthenNoteToTheRightMs) {
-        if(noteLongEnough(curNonNoiseNote)) {
-            if (!noteLongEnough(curNoiseNote)) {
-                if (curNoiseNoteStartIndexInInputWindows < curNonNoiseNoteStartIndexInInputWindows) {
-                    curNonNoiseNote.makeLonger(curNoiseNote.lengthMs, curNoiseNote.lengthMs / measurementWindowMs, false);
-                    curNonNoiseNoteStartIndexInInputWindows = curNoiseNoteStartIndexInInputWindows;
-                } else if (curNoiseNoteStartIndexInInputWindows > curNonNoiseNoteStartIndexInInputWindows) {
-                    curNonNoiseNote.makeLonger(curNoiseNote.lengthMs, curNoiseNote.lengthMs / measurementWindowMs);
-                    curNoiseNoteStartIndexInInputWindows += curNoiseNote.lengthMs / measurementWindowMs;
-                }
-            } else {
-                curNonNoiseNote.makeLonger(howMuchToLengthenNoteToTheRightMs, howMuchToLengthenNoteToTheRightMs / measurementWindowMs);
+    private void mergeGlitchIntoAdjacentOrSurroundingNoteIfPossible(Note curNonNoiseNote, Note curNoiseNote) {
+        if(noteLongEnough(curNonNoiseNote) && !noteLongEnough(curNoiseNote)) {
+            if (curNoiseNoteStartIndexInWholeInput < curNonNoiseNoteStartIndexInWholeInput) {
+                curNonNoiseNote.makeLonger(curNoiseNote.lengthMs, curNoiseNote.lengthMs / measurementWindowMs, false);
+                curNonNoiseNoteStartIndexInWholeInput = curNoiseNoteStartIndexInWholeInput;
+            } else if (curNoiseNoteStartIndexInWholeInput > curNonNoiseNoteStartIndexInWholeInput) {
+                curNonNoiseNote.makeLonger(curNoiseNote.lengthMs, curNoiseNote.lengthMs / measurementWindowMs);
+                curNoiseNoteStartIndexInWholeInput += curNoiseNote.lengthMs / measurementWindowMs;
             }
         }
+    }
+
+    private Note initializeNote(Note.NoteType type) {
+        Note ret;
+        ret = new Note();
+        ret.type = type;
+        ret.lengthMs = measurementWindowMs;
+        return ret;
     }
 
     private Note initializeNote(double freq) {
@@ -665,5 +697,23 @@ public class NoteAndDeviationIdentifier {
         if(freq >= borderlineUpperLimit || freq <= borderlineLowerLimit)
             return true;
         return false;
+    }
+
+    private void setReferenceFreqAsNearestLowerCNote() {
+        if(referenceFreq < 130.81) {
+            referenceFreq = 65.41;
+        }
+        else if(referenceFreq < 261.63) {
+            referenceFreq = 130.81;
+        }
+        else if(referenceFreq < 523.25) {
+            referenceFreq = 261.63;
+        }
+        else if(referenceFreq < 1046.50) {
+            referenceFreq = 523.25;
+        }
+        else {
+            referenceFreq = 130.81;
+        }
     }
 }

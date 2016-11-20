@@ -110,12 +110,12 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
     private void setBLASettingsAndStartIt(double diff) {
         businessLogicAdapter = new BusinessLogicAdapter(audioRecordListener, this);
         businessLogicAdapter.addObserver(this);
-        ChartController.ChartControllerSettings s = new ChartController.ChartControllerSettings(1, 100, 2, 30, 3);
+        ChartController.ChartControllerSettings s = new ChartController.ChartControllerSettings(1, 100, 2, 30, 7);
         chartController = new ChartController(s, lineChart, this);
         chartController.initChart(this.getResources().getConfiguration().orientation);
         FESettings.maxDiffInPercent = 1;
         FESettings.sampleRate = AudioRecordListener.SAMPLE_RATE_STANDARD;
-        FESettings.loudnessThreshold = 120;
+        FESettings.loudnessThreshold = 30;
         FESettings.measurementWindowMs = 30;
         FESettings.nofConsecutiveUpwardsCrossingsToMeasure = 4;
         FESettings.gapBetweenSamplesWhenDetectingPause = 100;
@@ -125,6 +125,7 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
         NDISettings.measurementWindowMs = 30;
         NDISettings.minNoteLenMs = 100;
         NDISettings.octaveSpan = 2;
+        NDISettings.hasPredefinedCNote = true;
         businessLogicAdapter.setNoteIdentifierOptions(NDISettings);
         businessLogicAdapter.startListeningTune();
     }
@@ -243,17 +244,17 @@ public class MainActivity extends Activity implements Observer, BusinessLogicAda
 
     @Override
     public void onNotesOrPausesAvailable(final Note[] notes, final boolean noteChanged) {
-        try
-        {
-            Thread.sleep(400);
-        }
-        catch (InterruptedException ex) {}
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 chartController.drawNotes(notes, noteChanged);
             }
         });
+        try
+        {
+            Thread.sleep(400);
+        }
+        catch (InterruptedException ex) {}
     }
 
     @Override

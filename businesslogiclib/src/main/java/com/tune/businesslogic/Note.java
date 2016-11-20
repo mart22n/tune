@@ -71,6 +71,8 @@ public class Note {
     public void concatenate(Note n2) {
         lengthMs += n2.lengthMs;
         degree = n2.degree;
+        if(type == NoteType.UNDEFINED)
+            type = n2.type;
         if(((type == NoteType.VALIDNOTE || type == NoteType.BORDERLINE) && (n2.type == Note.NoteType.VALIDNOTE || n2.type == Note.NoteType.BORDERLINE))) {
             for (int j = 0; j < n2.deviations.size(); ++j) {
                 addDeviation(n2.getDeviation(j), n2.type == Note.NoteType.BORDERLINE);
@@ -79,8 +81,6 @@ public class Note {
                 type = Note.NoteType.BORDERLINE;
             }
         }
-        if(type == NoteType.UNDEFINED)
-            type = n2.type;
     }
 
     public int getDeviation(int index) {

@@ -71,10 +71,10 @@ public class BusinessLogicAdapter extends Observable implements Observer  {
 
             Note[] notes = noteAndDeviationIdentifier.convertWaveformToNotes(freqs);
             blaListener.onNotesOrPausesAvailable(notes, noteAndDeviationIdentifier.noteChanged());
-            Log.d(tag, "Count = " + String.valueOf(notes.length) + ":");
+            //Log.d(tag, "Count = " + String.valueOf(notes.length) + ":");
             for (int i = 0; i < notes.length; ++i) {
-                Log.d(tag, "Note len = " + String.valueOf(notes[i].lengthMs) + "; Degree = " + String.valueOf(notes[i].degree) +
-                "; Type = " + String.valueOf(notes[i].type));
+/*                Log.d(tag, "Note len = " + String.valueOf(notes[i].lengthMs) + "; Degree = " + String.valueOf(notes[i].degree) +
+                "; Type = " + String.valueOf(notes[i].type));*/
             }
         }
     }

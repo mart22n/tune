@@ -53,6 +53,14 @@ public class RollingAverageFinderTest extends TestBase {
     }
 
     @Test
+    public void whenSingleValueIsInputted_outputIsCorrect() {
+        rollingAverageFinder.write(3);
+
+        List<Double> ret = rollingAverageFinder.read();
+        Assert.assertEquals(3.0, ret.get(0));
+    }
+
+    @Test
     public void whenNumberOfInputValuesDoesNotDivideByNofValuesPerAverage_averageIsCorrect() {
         rollingAverageFinder.write(3);
         rollingAverageFinder.write(4);

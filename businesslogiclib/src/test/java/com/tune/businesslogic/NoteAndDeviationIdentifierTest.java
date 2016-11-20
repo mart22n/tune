@@ -19,19 +19,48 @@ public class NoteAndDeviationIdentifierTest {
     }
 
     @Test
-    public void whenNote_andAfterThatAGlitch_glitchIsConcatenatedToNote() {
-        double[] input = new double[] { 220, 220, 220 };
+    public void whenLongEnoughNoteIsFollowedByGlitch_glitchIsMergedIntoNote() {
+        double[] input = new double[] { 220, 220, 220, 0 };
         Note[] notes = uut.convertWaveformToNotes(input);
-
-        input = new double[] { 0, 0, 0, 0, 220 };
-        notes = uut.convertWaveformToNotes(input);
         Assert.assertEquals(1, notes.length);
-        Assert.assertEquals(150, notes[0].lengthMs);
-        Assert.assertEquals(Note.NoteType.PAUSE, notes[0].type);
+        Assert.assertEquals(120, notes[0].lengthMs);
+        Assert.assertEquals(Note.NoteType.VALIDNOTE, notes[0].type);
     }
 
     @Test
-    public void whenWeHaveALongSingleNote_outputIsCorrect() {
+    public void whenLongEnoughNoteIsFollowedByGlitch_glitchIsMergedIntoNote2() {
+        double[] input = new double[] { 220, 220, 220, 0, 0 };
+        Note[] notes = uut.convertWaveformToNotes(input);
+        Assert.assertEquals(1, notes.length);
+        Assert.assertEquals(150, notes[0].lengthMs);
+        Assert.assertEquals(Note.NoteType.VALIDNOTE, notes[0].type);
+    }
+
+    /*@Test
+    public void whenNote_andAfterThatAGlitch_glitchIsConcatenatedToNote() {
+        double[] input = new double[] { 220, 220, 220, 0, 0, 0, 0, 220 };
+        Note[] notes = uut.convertWaveformToNotes(input);
+        Assert.assertEquals(2, notes.length);
+        Assert.assertEquals(150, notes[1].lengthMs);
+        Assert.assertEquals(Note.NoteType.PAUSE, notes[1].type);
+    }
+
+    @Test
+    public void whenNoteInFirstWindow_andInSecondWindowThereIsANoteAndAfterThatGlitch_glitchIsConcatenatedToNote() {
+        double[] input = new double[] { 220, 220, 220 };
+        Note[] notes = uut.convertWaveformToNotes(input);
+
+        input = new double[] { 220, 220, 220, 0, 0, 0, 0, 220 };
+        notes = uut.convertWaveformToNotes(input);
+        Assert.assertEquals(2, notes.length);
+        Assert.assertEquals(180, notes[0].lengthMs);
+        Assert.assertEquals(Note.NoteType.VALIDNOTE, notes[0].type);
+        Assert.assertEquals(150, notes[1].lengthMs);
+        Assert.assertEquals(Note.NoteType.PAUSE, notes[1].type);
+    }
+
+    @Test
+    public void whenWeHaveALongSingleNote_oneNoteIsReturned() {
         double[] input = new double[] { 220, 220, 220, 220 };
         Note[] notes = uut.convertWaveformToNotes(input);
         Assert.assertEquals(1, notes.length);
@@ -92,10 +121,20 @@ public class NoteAndDeviationIdentifierTest {
         Assert.assertEquals(3, notes.length);
         Assert.assertEquals(240, notes[0].lengthMs);
         Assert.assertEquals(Note.NoteType.VALIDNOTE, notes[0].type);
+        Assert.assertEquals(8, notes[0].deviations.size());
         Assert.assertEquals(90, notes[1].lengthMs);
         Assert.assertEquals(Note.NoteType.NOISE, notes[1].type);
         Assert.assertEquals(90, notes[2].lengthMs);
         Assert.assertEquals(Note.NoteType.VALIDNOTE, notes[2].type);
+    }
+
+    @Test
+    public void whenThereIsNoiseContainingSameFreqAsSurroundingNote_noiseIsMergedIntoSurroundingNote() {
+        double[] input = new double[] { 220, 220, 220, 0, 220, 0, 220, 220, 220 };
+        Note[] notes = uut.convertWaveformToNotes(input);
+        Assert.assertEquals(1, notes.length);
+        Assert.assertEquals(270, notes[0].lengthMs);
+        Assert.assertEquals(Note.NoteType.VALIDNOTE, notes[0].type);
     }
 
     @Test
@@ -183,7 +222,7 @@ public class NoteAndDeviationIdentifierTest {
     }
 
     @Test
-    public void ifAtFirstWeHaveGlitch_andAfterThatLongEnoughNote_outputIsCorrect() {
+    public void ifAtFirstWeHaveGlitch_andAfterThatLongEnoughNote_twoNotesAreReturned() {
         double[] input = new double[] { 0, 440, 440, 440, 222, 222, 222, 222 };
         Note[] notes = uut.convertWaveformToNotes(input);
         Assert.assertEquals(2, notes.length);
@@ -218,13 +257,16 @@ public class NoteAndDeviationIdentifierTest {
     }
 
     @Test
-    public void ifWeHaveAtBeginningOfRecordingValidNotes_butLaterOnlyPausesOrNoises_someNotesAreReturned() {
+    public void ifWeHaveNoiseAndThenANoteAndThenNoise_threeNotesAreReturned() {
         double[] input = new double[] { 30, 60, 85, 220, 220, 220, 30, 60, 85 };
         Note[] notes = uut.convertWaveformToNotes(input);
         Assert.assertEquals(3, notes.length);
+    }
 
-        input = new double[] { 0, 0, 0, 220, 220, 0, 0, 0, 220 };
-        notes = uut.convertWaveformToNotes(input);
+    @Test
+    public void ifWeHavePauseAndThenTooShortNoteAndThenPauseAndThenTooShortNote_noNotesAreReturned() {
+        double[] input = new double[] { 0, 0, 0, 220, 220, 0, 0, 0, 220 };
+        Note[] notes = uut.convertWaveformToNotes(input);
         Assert.assertEquals(0, notes.length);
     }
 
@@ -324,7 +366,7 @@ public class NoteAndDeviationIdentifierTest {
         notes = uut.convertWaveformToNotes(input);
         Assert.assertEquals(false, uut.noteChanged());
     }
-
+*/
     public void setNISettings(int measurementWindowMs, int minNoteLenMs,
                               int octaveSpan, int deviationWhereBorderlineStarts) {
         NoteAndDeviationIdentifier.NoteIdentifierSettings s = new NoteAndDeviationIdentifier.NoteIdentifierSettings();
