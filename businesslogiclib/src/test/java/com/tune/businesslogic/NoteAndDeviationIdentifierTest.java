@@ -36,7 +36,7 @@ public class NoteAndDeviationIdentifierTest {
         Assert.assertEquals(Note.NoteType.VALIDNOTE, notes[0].type);
     }
 
-    /*@Test
+    @Test
     public void whenNote_andAfterThatAGlitch_glitchIsConcatenatedToNote() {
         double[] input = new double[] { 220, 220, 220, 0, 0, 0, 0, 220 };
         Note[] notes = uut.convertWaveformToNotes(input);
@@ -366,7 +366,7 @@ public class NoteAndDeviationIdentifierTest {
         notes = uut.convertWaveformToNotes(input);
         Assert.assertEquals(false, uut.noteChanged());
     }
-*/
+
     public void setNISettings(int measurementWindowMs, int minNoteLenMs,
                               int octaveSpan, int deviationWhereBorderlineStarts) {
         NoteAndDeviationIdentifier.NoteIdentifierSettings s = new NoteAndDeviationIdentifier.NoteIdentifierSettings();

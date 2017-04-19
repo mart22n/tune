@@ -686,12 +686,12 @@ public class NoteAndDeviationIdentifier {
     }
 
     private int calcDeviation(double freq, int nearestDegreeToTheFreq) {
-        double degreeFreq =  Math.pow(2, ((double)nearestDegreeToTheFreq + 12 * octaveSpan - (double)(octaveSpan * 12)) / 12) * referenceFreq;
+        double degreeFreq = freqsOfDegrees[nearestDegreeToTheFreq];// Math.pow(2, ((double)nearestDegreeToTheFreq + 12 * octaveSpan - (double)(octaveSpan * 12)) / 12) * referenceFreq;
         return (int)(Math.log(freq / degreeFreq) / Math.log(2) * 1200);
     }
 
-    private boolean freqIsBorderline(double freq, double degree) {
-        double degreeFreq =  Math.pow(2, degree / 12) * referenceFreq;
+    private boolean freqIsBorderline(double freq, int degree) {
+        double degreeFreq =  freqsOfDegrees[degree];//Math.pow(2, degree / 12) * referenceFreq;
         double borderlineUpperLimit = degreeFreq * Math.pow(2, (double)deviationWhereBorderLineStarts / 1200);
         double borderlineLowerLimit = degreeFreq * Math.pow(2, -(double)deviationWhereBorderLineStarts / 1200);
         if(freq >= borderlineUpperLimit || freq <= borderlineLowerLimit)

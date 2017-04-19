@@ -9,6 +9,7 @@ import java.util.List;
 public class Note {
     public enum NoteType { UNDEFINED, PAUSE, VALIDNOTE, NOISE, BORDERLINE, OUTOFRANGE };
     private String name;
+    public List<Double> freqs;
     public int degree; // 0 - reference note; 12 - 1 octave up; -12 - 1 octave down
     public int lengthMs;
     public List<Integer> deviations; // list of deviations for the note
@@ -16,7 +17,8 @@ public class Note {
 
     Note() {
         this.type = NoteType.UNDEFINED;
-        this.deviations = new ArrayList<Integer>();
+        this.deviations = new ArrayList<>();
+        this.freqs = new ArrayList<>();
     }
 
     Note(Note orig) {
@@ -25,6 +27,7 @@ public class Note {
         this.degree = orig.degree;
         this.lengthMs = orig.lengthMs;
         this.deviations = orig.deviations;
+        this.freqs = orig.freqs;
     }
 
     void addDeviation(int deviation, boolean borderline) {

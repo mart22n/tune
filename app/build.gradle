@@ -1,3 +1,7 @@
 dependencies {
     compile 'com.android.support:support-v4:21.+'
 }
+
+android {
+    compileSdkVersion 23
+}
